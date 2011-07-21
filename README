@@ -1,0 +1,14 @@
+Tanks! is a game implemented with pygame in which the player must use a tank to destroy other tanks and assorted dangerous foes.
+
+Controls:
+
+The tank's driving is controlled by either the arrow keys or WASD:
+
+Up/W: Forward (or brake if in reverse)
+Down/S: Backward (or brake if going forwards)
+Left/A: Turn tank to the left
+Right/D: Turn tank to the right
+
+The tank's turret is controlled by the position of the mouse. The turret will turn towards the mouse.
+
+TODO: To fire a bullet, hit the left mouse button. It will fire in the direction that the turret is currently facing (which may not be in the direction of the mouse since the turret does not turn instantly).
