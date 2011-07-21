@@ -52,7 +52,7 @@ class Point:
 
   # returns this point, rotated a radians about point p
   def rotate_about(self, a, p):
-    return self.translate(ORIGIN - p)
+    return self.translate(ORIGIN - p).rotate(a).translate(p - ORIGIN)
 
 ORIGIN = Point(0, 0)
 

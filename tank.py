@@ -86,7 +86,8 @@ class Turret(pygame.sprite.Sprite):
   # creates and returns a Bullet starting at the end of the Turret's
   # barrel and going in the direction of the barrel.
   def fire(self):
-    return Bullet(0, 0, self.direction + self.tank.direction)
+    origin = self.tank.position.translate(Vector(constants.TURRET_LENGTH_RATIO / 2, 0)).rotate_about(self.direction + self.tank.direction, self.tank.position)
+    return Bullet(origin.x, origin.y, self.direction + self.tank.direction)
 
   # turn towards target point
   def turn(self, delta, target):

@@ -11,4 +11,4 @@ Right/D: Turn tank to the right
 
 The tank's turret is controlled by the position of the mouse. The turret will turn towards the mouse.
 
-TODO: To fire a bullet, hit the left mouse button. It will fire in the direction that the turret is currently facing (which may not be in the direction of the mouse since the turret does not turn instantly).
+To fire a bullet, hit the left mouse button. It will fire in the direction that the turret is currently facing (which may not be in the direction of the mouse since the turret does not turn instantly).
