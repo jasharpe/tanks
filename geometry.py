@@ -5,16 +5,22 @@ class Vector:
     self.x = x
     self.y = y
 
-  def plus(self, v):
+  def __repr__(self):
+    return "Vector(%f, %f)" % (self.x, self.y)
+
+  def __add__(self, v):
     return Vector(self.x + v.x, self.y + v.y)
 
-  def negative(self):
+  def __neg__(self):
     return Vector(-self.x, -self.y)
 
-  def minus(self, v):
+  def __sub__(self, v):
     return Vector(self.x - v.x, self.y - v.y)
 
-  def scalar_multiply(self, s):
+  def __mul__(self, s):
+    return Vector(self.x * s, self.y * s)
+
+  def __rmul__(self, s):
     return Vector(self.x * s, self.y * s)
 
   def normalize(self):
@@ -32,16 +38,21 @@ class Point:
   def __repr__(self):
     return "Point(%.02f, %.02f)" % (self.x, self.y)
 
-  def minus(self, p):
+  def __sub__(self, p):
     return Vector(self.x - p.x, self.y - p.y)
 
   def translate(self, v):
     return Point(self.x + v.x, self.y + v.y)
 
+  # returns this point, rotated a radians about the origin
   def rotate(self, a):
     return Point(
         self.x * math.cos(a) - self.y * math.sin(a),
         self.x * math.sin(a) + self.y * math.cos(a))
+
+  # returns this point, rotated a radians about point p
+  def rotate_about(self, a, p):
+    return self.translate(ORIGIN - p)
 
 ORIGIN = Point(0, 0)
 

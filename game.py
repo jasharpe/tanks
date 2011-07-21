@@ -1,6 +1,6 @@
 import pygame
 import constants
-from tank import Tank, Turret, TANK_SIZE_RATIO
+from tank import Tank, Turret
 from geometry import Vector, Point, Line, ORIGIN
 from tile import Tile
 
@@ -52,10 +52,10 @@ def tank_collides_with_tile(tank, tile):
     return []
   
   # otherwise, have to verify collision in case of turned tank
-  half_width = TANK_SIZE_RATIO / 2
-  half_height = TANK_SIZE_RATIO / 2
-  minus_center = ORIGIN.minus(tank.position)
-  plus_center = tank.position.minus(ORIGIN)
+  half_width = constants.TANK_SIZE_RATIO / 2
+  half_height = constants.TANK_SIZE_RATIO / 2
+  minus_center = ORIGIN - tank.position
+  plus_center = tank.position - ORIGIN
   back_left = tank.position.translate(Vector(-half_width, -half_height)).translate(minus_center).rotate(tank.direction).translate(plus_center)
   front_left = tank.position.translate(Vector(half_width, -half_height)).translate(minus_center).rotate(tank.direction).translate(plus_center)
   back_right = tank.position.translate(Vector(-half_width, half_height)).translate(minus_center).rotate(tank.direction).translate(plus_center)
@@ -108,6 +108,7 @@ def main():
   for tile in tiles:
     if tile.solid:
       solid.add(tile)
+  bullets = pygame.sprite.RenderPlain()
 
   clock = pygame.time.Clock()
   exit_program = False
@@ -117,9 +118,12 @@ def main():
     # update
 
     # event handling
+    fire = False
     for event in pygame.event.get():
       if event.type == pygame.QUIT:
         exit_program = True
+      elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        fire = True
     
     # control handling
     pressed = pygame.key.get_pressed()
@@ -149,12 +153,20 @@ def main():
     turret.turn(delta, Point(float(m_p[0]) / constants.TILE_SIZE, float(m_p[1]) / constants.TILE_SIZE))
 
     turrets.update(delta)
+    bullets.update(delta)
+
+    # do bullet collision detection
+
+    # fire!
+    if fire:
+       bullets.add(turret.fire())
 
     # draw
 
     screen.fill((0, 0, 0))
     tiles.draw(screen)
     tanks.draw(screen)
+    bullets.draw(screen)
     turrets.draw(screen)
 
     pygame.display.flip()

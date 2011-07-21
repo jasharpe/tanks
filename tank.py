@@ -1,31 +1,17 @@
 import pygame, math
 import constants
 from geometry import Vector, Point
-
-# this is the number of seconds it takes to make one complete rotation
-TANK_TURNING_SPEED = 9.0
-TURRET_TURNING_SPEED = 3.0
-# the acceleration, deceleration, and natural deceleration rate in
-# tiles per second^2
-ACCEL_SPEED = 0.6
-DECEL_SPEED = 0.6
-NEUTRAL_SPEED = 0.6
-# max speed in tiles per second
-MAX_SPEED = 1.2
-# the size of the tank relative to a tile
-TANK_SIZE_RATIO = 0.8
-TURRET_LENGTH_RATIO = 0.6
-TURRET_WIDTH_RATIO = 0.2
-TANK_COLOR = pygame.Color(20, 150, 20, 255)
+from bullet import Bullet
 
 class Tank(pygame.sprite.Sprite):
   def __init__(self, x, y):
     pygame.sprite.Sprite.__init__(self)
 
-    self.original = pygame.Surface([constants.TILE_SIZE * TANK_SIZE_RATIO, constants.TILE_SIZE * TANK_SIZE_RATIO], flags=pygame.SRCALPHA)
-    self.original.fill(TANK_COLOR)
+    self.original = pygame.Surface([constants.TILE_SIZE * constants.TANK_SIZE_RATIO, constants.TILE_SIZE * constants.TANK_SIZE_RATIO], flags=pygame.SRCALPHA)
+    self.original.fill(constants.TANK_COLOR)
     self.image = self.original
     self.rect = self.image.get_rect()
+    
     # current coordinates of the centre of the tank
     # starts at + 0.5 so that it is in the middle of its start tile
     self.position = Point(x + 0.5, y + 0.5)
@@ -44,7 +30,7 @@ class Tank(pygame.sprite.Sprite):
     
   def update(self, delta):
     self.old_position = self.position
-    self.position = self.position.translate(Vector(math.cos(self.direction), math.sin(self.direction)).normalize().scalar_multiply((delta / 1000.0) * self.speed))
+    self.position = self.position.translate(((delta / 1000.0) * self.speed) * Vector(math.cos(self.direction), math.sin(self.direction)).normalize())
     self.update_graphics()
 
   def update_graphics(self):
@@ -53,36 +39,36 @@ class Tank(pygame.sprite.Sprite):
     #self.rect.center = (self.position.x, self.position.y)
   
   def accelerate(self, delta):
-    self.speed += ACCEL_SPEED * (delta / 1000.0)
+    self.speed += constants.ACCEL_SPEED * (delta / 1000.0)
     if self.speed < 0:
       self.neutral(delta)
-    self.speed = min(MAX_SPEED, self.speed)
+    self.speed = min(constants.MAX_SPEED, self.speed)
 
   def decelerate(self, delta):
-    self.speed -= DECEL_SPEED * (delta / 1000.0)
+    self.speed -= constants.DECEL_SPEED * (delta / 1000.0)
     if self.speed > 0:
       self.neutral(delta)
-    self.speed = max(-MAX_SPEED, self.speed)
+    self.speed = max(-constants.MAX_SPEED, self.speed)
 
   def neutral(self, delta):
     if self.speed > 0:
-      self.speed -= NEUTRAL_SPEED * (delta / 1000.0)
+      self.speed -= constants.NEUTRAL_SPEED * (delta / 1000.0)
       if self.speed < 0.01:
         self.speed = 0
     elif self.speed < 0:
-      self.speed += NEUTRAL_SPEED * (delta / 1000.0)
+      self.speed += constants.NEUTRAL_SPEED * (delta / 1000.0)
       if self.speed > -0.01:
         self.speed = 0
 
   def turn_left(self, delta):
     self.old_direction = self.direction
-    self.direction -= 2 * math.pi * delta / (TANK_TURNING_SPEED * 1000.0)
+    self.direction -= 2 * math.pi * delta / (constants.TANK_TURNING_SPEED * 1000.0)
     if self.direction < -math.pi:
       self.direction += 2 * math.pi
 
   def turn_right(self, delta):
     self.old_direction = self.direction
-    self.direction += 2 * math.pi * delta / (TANK_TURNING_SPEED * 1000.0)
+    self.direction += 2 * math.pi * delta / (constants.TANK_TURNING_SPEED * 1000.0)
     if self.direction > math.pi:
       self.direction -= 2 * math.pi
 
@@ -90,17 +76,22 @@ class Turret(pygame.sprite.Sprite):
   def __init__(self, tank):
     pygame.sprite.Sprite.__init__(self)
 
-    self.original = pygame.transform.smoothscale(pygame.image.load("turret.png").convert_alpha(), (int(round(TURRET_LENGTH_RATIO * constants.TILE_SIZE)), int(round(TURRET_WIDTH_RATIO * constants.TILE_SIZE))))
+    self.original = pygame.transform.smoothscale(pygame.image.load("turret.png").convert_alpha(), (int(round(constants.TURRET_LENGTH_RATIO * constants.TILE_SIZE)), int(round(constants.TURRET_WIDTH_RATIO * constants.TILE_SIZE))))
     self.image = self.original
     self.rect = self.image.get_rect()
     self.direction = 0.0
 
     self.tank = tank
 
+  # creates and returns a Bullet starting at the end of the Turret's
+  # barrel and going in the direction of the barrel.
+  def fire(self):
+    return Bullet(0, 0, self.direction + self.tank.direction)
+
   # turn towards target point
   def turn(self, delta, target):
     # target direction
-    d = target.minus(self.tank.position)
+    d = target - self.tank.position
     # target angle
     t_a = math.atan2(d.y, d.x)
     # current angle
@@ -111,13 +102,12 @@ class Turret(pygame.sprite.Sprite):
     while difference > math.pi:
       difference -= 2 * math.pi
 
-    # a small epsilon so the turret doesn't vibrate
     if difference > 0:
       # turn right
-      self.direction += min(2 * math.pi * delta / (TURRET_TURNING_SPEED * 1000.0), difference)
+      self.direction += min(2 * math.pi * delta / (constants.TURRET_TURNING_SPEED * 1000.0), difference)
     elif difference < 0:
       # turn left
-      self.direction -= min(2 * math.pi * delta / (TURRET_TURNING_SPEED * 1000.0), -difference)
+      self.direction -= min(2 * math.pi * delta / (constants.TURRET_TURNING_SPEED * 1000.0), -difference)
 
   def update(self, delta):
     self.image = pygame.transform.rotate(self.original, -(self.direction + self.tank.direction) * 180.0 / math.pi)
