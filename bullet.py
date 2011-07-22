@@ -1,6 +1,6 @@
 import pygame, math
 import constants
-from geometry import Vector, Point
+from geometry import Vector, Point, Line
 
 class Bullet(pygame.sprite.Sprite):
   # position holds xy coordinates of the bullet as a Point
@@ -15,11 +15,38 @@ class Bullet(pygame.sprite.Sprite):
     self.rect = self.image.get_rect()
 
     self.position = Point(x, y)
-    self.vec = Vector(math.cos(direction), math.sin(direction)).normalize()
     self.direction = direction
+    self.reset_vec()
+    self.bounces = 0
+
+    self.travelled = Line(self.position, self.position)
+
+  def has_bounces(self):
+    return True
+    return self.bounces < 2
+
+  def reset_vec(self):
+    self.vec = Vector(math.cos(self.direction), math.sin(self.direction)).normalize()
+
+  # bounce off wall (which is a line segment).
+  # traces movement of bullet backwards 
+  def bounce(self, wall):
+    line = Line(self.position, self.position.translate(self.vec))
+    self.position = wall.reflect(self.position)
+    p = line.intersect(wall)
+    self.direction = (self.position - p).angle()
+    self.reset_vec()
+    self.bounces += 1
+
+    self.update_graphics()
 
   def update(self, delta):
+    old_position = self.position
     self.position = self.position.translate(
         (constants.BULLET_SPEED * delta / 1000.0) * self.vec)
+    self.travelled = Line(old_position, self.position)
+    self.update_graphics()
+
+  def update_graphics(self):
     self.image = pygame.transform.rotate(self.original, -self.direction * 180.0 / math.pi)
     self.rect = self.image.get_rect(center=(constants.TILE_SIZE * self.position.x, constants.TILE_SIZE * self.position.y))

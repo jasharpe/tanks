@@ -23,12 +23,21 @@ class Vector:
   def __rmul__(self, s):
     return Vector(self.x * s, self.y * s)
 
+  def angle(self):
+    return math.atan2(self.y, self.x)
+
   def normalize(self):
     length = math.sqrt(self.x * self.x + self.y * self.y)
     if length == 0:
       print "Attempted to normalize zero vector"
       return Vector(0, 0)
-    return Vector(self.x / length, self.y / length)  
+    return Vector(self.x / length, self.y / length)
+
+  def length(self):
+    return math.sqrt(self.length2())
+
+  def length2(self):
+    return self.x * self.x + self.y * self.y
 
 class Point:
   def __init__(self, x, y):
@@ -67,20 +76,43 @@ class Line:
   def __repr__(self):
     return "Line(%s, %s)" % (self.p1, self.p2)
 
+  # returns the reflection of p across this line
+  def reflect(self, p):
+    A = -self.B
+    B = self.A
+    C = A * p.x + B * p.y
+    # find second point on line
+    if B != 0:
+      x2 = p.x + 1.0
+      y2 = (C - A * x2) / B
+      p2 = Point(x2, y2)
+    else:
+      y2 = p.y + 1.0
+      x2 = (C - B * y2) / A
+      p2 = Point(x2, y2)
+    perp = Line(p, p2)
+    intersect = self.intersect(perp)
+    return p.translate(2 * (intersect - p))
+
+  def intersect(self, l):
+    det = self.A * l.B - l.A * self.B
+    if (det == 0):
+      return None
+    else:
+      return Point((l.B * self.C - self.B * l.C) / det, (self.A * l.C - l.A * self.C) / det)
+
   # returns the point that is the intersection between
   # this line and the given line, or None if one doesn't exist
   # (if the lines are parallel, or the line segments don't
   # actually intersect).
   def intersect_segments(self, l):
-    det = self.A * l.B - l.A * self.B
-    if (det == 0):
+    p = self.intersect(l)
+    if p is None:
       return None
+    elif min(self.p1.x, self.p2.x) <= p.x <= max(self.p1.x, self.p2.x) and \
+       min(self.p1.y, self.p2.y) <= p.y <= max(self.p1.y, self.p2.y) and \
+       min(l.p1.x, l.p2.x) <= p.x <= max(l.p1.x, l.p2.x) and \
+       min(l.p1.y, l.p2.y) <= p.y <= max(l.p1.y, l.p2.y):
+      return p
     else:
-      p = Point((l.B * self.C - self.B * l.C) / det, (self.A * l.C - l.A * self.C) / det)
-      if min(self.p1.x, self.p2.x) <= p.x <= max(self.p1.x, self.p2.x) and \
-         min(self.p1.y, self.p2.y) <= p.y <= max(self.p1.y, self.p2.y) and \
-         min(l.p1.x, l.p2.x) <= p.x <= max(l.p1.x, l.p2.x) and \
-         min(l.p1.y, l.p2.y) <= p.y <= max(l.p1.y, l.p2.y):
-        return p
-      else:
-        return None
+      return None

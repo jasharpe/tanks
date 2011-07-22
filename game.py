@@ -46,6 +46,34 @@ def load_level(number):
       board.set_tile(j, i, Tile(line[j], j, i))
   return Level(player_start_x, player_start_y, board)
 
+def bullet_collides_with_tile(bullet, tile):
+  # TODO: if the distance between the bullet and the center of the tile is
+  # greater than the distance travelled by the bullet plus the
+  # size of the tile, then no collision could have occurred
+  #if bullet.travelled.length() + :
+  #  return None
+
+  tile_top_left = tile.position.translate(Vector(-0.5, -0.5))
+  tile_top_right = tile.position.translate(Vector(0.5, -0.5))
+  tile_bottom_right = tile.position.translate(Vector(0.5, 0.5))
+  tile_bottom_left = tile.position.translate(Vector(-0.5, 0.5))
+  tile_left = Line(tile_top_left, tile_bottom_left)
+  tile_right = Line(tile_top_right, tile_bottom_right)
+  tile_top = Line(tile_top_right, tile_top_left)
+  tile_bottom = Line(tile_bottom_right, tile_bottom_left)
+  tile_sides = [tile_left, tile_right, tile_top, tile_bottom]
+
+  intersect = None
+  max_dist2 = -1.0
+  for tile_side in tile_sides:
+    p = bullet.travelled.intersect_segments(tile_side)
+    if not p is None:
+      if (p - bullet.position).length2() > max_dist2:
+        intersect = tile_side
+        max_dist = (p - bullet.position).length2()
+
+  return intersect
+
 def tank_collides_with_tile(tank, tile):
   # if the rects don't even collide, then they don't collide
   if not pygame.sprite.collide_rect(tank, tile):
@@ -155,11 +183,24 @@ def main():
     turrets.update(delta)
     bullets.update(delta)
 
-    # do bullet collision detection
-
     # fire!
     if fire:
-       bullets.add(turret.fire())
+      bullet = turret.fire()
+      if not bullet is None:
+        bullets.add(bullet)
+
+    # do bullet collision detection
+    # bounce off walls once, then explode on second contact
+    for bullet in bullets:
+      for tile in solid:
+        intersect = bullet_collides_with_tile(bullet, tile)
+        if not intersect is None:
+          if bullet.has_bounces():
+            bullet.bounce(intersect)
+          else:
+            bullet.remove(bullets)
+            #bullet.explode()
+        
 
     # draw
 

@@ -94,7 +94,7 @@ class Turret(pygame.sprite.Sprite):
     # target direction
     d = target - self.tank.position
     # target angle
-    t_a = math.atan2(d.y, d.x)
+    t_a = d.angle()
     # current angle
     c_a = self.direction + self.tank.direction
     difference = t_a - c_a
