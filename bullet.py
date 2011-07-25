@@ -15,15 +15,16 @@ class Bullet(pygame.sprite.Sprite):
     self.rect = self.image.get_rect()
 
     self.position = Point(x, y)
+    self.old_position = self.position
     self.direction = direction
     self.reset_vec()
     self.bounces = 0
 
     self.travelled = Line(self.position, self.position)
+    self.update_graphics()
 
   def has_bounces(self):
-    return True
-    return self.bounces < 2
+    return self.bounces < 1
 
   def reset_vec(self):
     self.vec = Vector(math.cos(self.direction), math.sin(self.direction)).normalize()
@@ -33,18 +34,20 @@ class Bullet(pygame.sprite.Sprite):
   def bounce(self, wall):
     line = Line(self.position, self.position.translate(self.vec))
     self.position = wall.reflect(self.position)
+    self.old_position = wall.reflect(self.old_position)
     p = line.intersect(wall)
     self.direction = (self.position - p).angle()
+    self.travelled = Line(self.old_position, self.position)
     self.reset_vec()
     self.bounces += 1
 
     self.update_graphics()
 
   def update(self, delta):
-    old_position = self.position
+    self.old_position = self.position
     self.position = self.position.translate(
         (constants.BULLET_SPEED * delta / 1000.0) * self.vec)
-    self.travelled = Line(old_position, self.position)
+    self.travelled = Line(self.old_position, self.position)
     self.update_graphics()
 
   def update_graphics(self):

@@ -44,6 +44,9 @@ class Point:
     self.x = x
     self.y = y
 
+  def as_tuple(self):
+    return (self.x, self.y)
+
   def __repr__(self):
     return "Point(%.02f, %.02f)" % (self.x, self.y)
 
@@ -76,6 +79,9 @@ class Line:
   def __repr__(self):
     return "Line(%s, %s)" % (self.p1, self.p2)
 
+  def length(self):
+    return (self.p2 - self.p1).length()
+
   # returns the reflection of p across this line
   def reflect(self, p):
     A = -self.B
@@ -106,13 +112,14 @@ class Line:
   # (if the lines are parallel, or the line segments don't
   # actually intersect).
   def intersect_segments(self, l):
+    epsilon = 0.01
     p = self.intersect(l)
     if p is None:
       return None
-    elif min(self.p1.x, self.p2.x) <= p.x <= max(self.p1.x, self.p2.x) and \
-       min(self.p1.y, self.p2.y) <= p.y <= max(self.p1.y, self.p2.y) and \
-       min(l.p1.x, l.p2.x) <= p.x <= max(l.p1.x, l.p2.x) and \
-       min(l.p1.y, l.p2.y) <= p.y <= max(l.p1.y, l.p2.y):
+    elif min(self.p1.x, self.p2.x) - epsilon <= p.x <= max(self.p1.x, self.p2.x) + epsilon and \
+       min(self.p1.y, self.p2.y) - epsilon <= p.y <= max(self.p1.y, self.p2.y) + epsilon and \
+       min(l.p1.x, l.p2.x) - epsilon <= p.x <= max(l.p1.x, l.p2.x) + epsilon and \
+       min(l.p1.y, l.p2.y) - epsilon <= p.y <= max(l.p1.y, l.p2.y) + epsilon:
       return p
     else:
       return None

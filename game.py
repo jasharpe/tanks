@@ -1,5 +1,5 @@
 import pygame
-import constants
+import constants, math
 from tank import Tank, Turret
 from geometry import Vector, Point, Line, ORIGIN
 from tile import Tile
@@ -47,11 +47,11 @@ def load_level(number):
   return Level(player_start_x, player_start_y, board)
 
 def bullet_collides_with_tile(bullet, tile):
-  # TODO: if the distance between the bullet and the center of the tile is
+  # if the distance between the bullet and the center of the tile is
   # greater than the distance travelled by the bullet plus the
   # size of the tile, then no collision could have occurred
-  #if bullet.travelled.length() + :
-  #  return None
+  if bullet.travelled.length() + math.sqrt(2) / 2 < (bullet.position - tile.position).length():
+    return []
 
   tile_top_left = tile.position.translate(Vector(-0.5, -0.5))
   tile_top_right = tile.position.translate(Vector(0.5, -0.5))
@@ -63,16 +63,13 @@ def bullet_collides_with_tile(bullet, tile):
   tile_bottom = Line(tile_bottom_right, tile_bottom_left)
   tile_sides = [tile_left, tile_right, tile_top, tile_bottom]
 
-  intersect = None
-  max_dist2 = -1.0
+  intersects = []
   for tile_side in tile_sides:
     p = bullet.travelled.intersect_segments(tile_side)
     if not p is None:
-      if (p - bullet.position).length2() > max_dist2:
-        intersect = tile_side
-        max_dist = (p - bullet.position).length2()
+      intersects.append((tile_side, p))
 
-  return intersect
+  return intersects
 
 def tank_collides_with_tile(tank, tile):
   # if the rects don't even collide, then they don't collide
@@ -191,15 +188,44 @@ def main():
 
     # do bullet collision detection
     # bounce off walls once, then explode on second contact
+    
     for bullet in bullets:
+      intersects = []
       for tile in solid:
-        intersect = bullet_collides_with_tile(bullet, tile)
-        if not intersect is None:
-          if bullet.has_bounces():
-            bullet.bounce(intersect)
-          else:
-            bullet.remove(bullets)
-            #bullet.explode()
+        tile_intersects = bullet_collides_with_tile(bullet, tile)
+        for (intersect, intersect_point) in tile_intersects:
+          intersects.append((tile, intersect, intersect_point))
+      
+      if not intersects:
+        continue
+
+      good_intersects = []
+      for (tile, intersect, intersect_point) in intersects:
+        # throw out any reflections that would end up with the bullet
+        # inside a tile.
+        include = True
+        for (other_tile, garbage1, garbage2) in intersects:
+          rect = pygame.Rect(other_tile.position.x - 0.5, other_tile.position.y - 0.5, 1, 1)
+          if rect.collidepoint(intersect.reflect(bullet.position).as_tuple()):
+            include = False
+            break
+            
+        if include:
+          good_intersects.append((tile, intersect, intersect_point))
+      
+      closest = None
+      dist2 = 0
+      for (tile, intersect, intersect_point) in good_intersects:
+        if closest is None or (bullet.position - intersect_point).length2() < dist2:
+          closest = intersect
+          dist2 = (bullet.position - intersect_point).length2()
+
+      if not closest is None:
+        if bullet.has_bounces():
+          bullet.bounce(closest)
+        else:
+          bullet.remove(bullets)
+          #bullet.explode()
         
 
     # draw
