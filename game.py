@@ -134,6 +134,8 @@ def main():
     if tile.solid:
       solid.add(tile)
   bullets = pygame.sprite.RenderPlain()
+  shocks = pygame.sprite.RenderPlain()
+  explosions = pygame.sprite.RenderPlain()
 
   clock = pygame.time.Clock()
   exit_program = False
@@ -190,42 +192,54 @@ def main():
     # bounce off walls once, then explode on second contact
     
     for bullet in bullets:
-      intersects = []
-      for tile in solid:
-        tile_intersects = bullet_collides_with_tile(bullet, tile)
-        for (intersect, intersect_point) in tile_intersects:
-          intersects.append((tile, intersect, intersect_point))
-      
-      if not intersects:
-        continue
+      bounced = True
+      while bounced:
+        intersects = []
+        for tile in solid:
+          tile_intersects = bullet_collides_with_tile(bullet, tile)
+          for (intersect, intersect_point) in tile_intersects:
+            intersects.append((tile, intersect, intersect_point))
+        
+        if not intersects:
+          bounced = False
+          break
 
-      good_intersects = []
-      for (tile, intersect, intersect_point) in intersects:
-        # throw out any reflections that would end up with the bullet
-        # inside a tile.
-        include = True
-        for (other_tile, garbage1, garbage2) in intersects:
-          rect = pygame.Rect(other_tile.position.x - 0.5, other_tile.position.y - 0.5, 1, 1)
-          if rect.collidepoint(intersect.reflect(bullet.position).as_tuple()):
-            include = False
-            break
-            
-        if include:
-          good_intersects.append((tile, intersect, intersect_point))
-      
-      closest = None
-      dist2 = 0
-      for (tile, intersect, intersect_point) in good_intersects:
-        if closest is None or (bullet.position - intersect_point).length2() < dist2:
-          closest = intersect
-          dist2 = (bullet.position - intersect_point).length2()
+        print intersects
 
-      if not closest is None:
-        if bullet.has_bounces():
-          bullet.bounce(closest)
+        good_intersects = []
+        for (tile, intersect, intersect_point) in intersects:
+          # throw out any reflections that would end up with the bullet
+          # inside a tile.
+          include = True
+          for (other_tile, garbage1, garbage2) in intersects:
+            rect = pygame.Rect(other_tile.position.x - 0.5, other_tile.position.y - 0.5, 1, 1)
+            print rect, intersect.reflect(bullet.position)
+            if rect.collidepoint(intersect.reflect(bullet.position).as_tuple()):
+              print "don't include"
+              include = False
+              break
+              
+          if include:
+            good_intersects.append((tile, intersect, intersect_point))
+        
+        print good_intersects
+
+        closest = None
+        dist2 = 0
+        for (tile, intersect, intersect_point) in good_intersects:
+          if closest is None or (bullet.position - intersect_point).length2() < dist2:
+            closest = intersect
+            dist2 = (bullet.position - intersect_point).length2()
+
+        if not closest is None:
+          if bullet.has_bounces():
+            bullet.bounce(closest)
+          else:
+            bullet.remove(bullets)
+            #explosions.add(bullet.explode())
+            bounced = False
         else:
-          bullet.remove(bullets)
-          #bullet.explode()
+          bounced = False
         
 
     # draw

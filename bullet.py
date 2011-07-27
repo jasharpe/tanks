@@ -24,7 +24,7 @@ class Bullet(pygame.sprite.Sprite):
     self.update_graphics()
 
   def has_bounces(self):
-    return self.bounces < 1
+    return self.bounces < 5
 
   def reset_vec(self):
     self.vec = Vector(math.cos(self.direction), math.sin(self.direction)).normalize()
@@ -37,7 +37,7 @@ class Bullet(pygame.sprite.Sprite):
     self.old_position = wall.reflect(self.old_position)
     p = line.intersect(wall)
     self.direction = (self.position - p).angle()
-    self.travelled = Line(self.old_position, self.position)
+    self.travelled = Line(p, self.position)
     self.reset_vec()
     self.bounces += 1
 

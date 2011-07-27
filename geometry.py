@@ -48,7 +48,7 @@ class Point:
     return (self.x, self.y)
 
   def __repr__(self):
-    return "Point(%.02f, %.02f)" % (self.x, self.y)
+    return "Point(%f, %f)" % (self.x, self.y)
 
   def __sub__(self, p):
     return Vector(self.x - p.x, self.y - p.y)
@@ -116,7 +116,7 @@ class Line:
     p = self.intersect(l)
     if p is None:
       return None
-    elif min(self.p1.x, self.p2.x) - epsilon <= p.x <= max(self.p1.x, self.p2.x) + epsilon and \
+    if min(self.p1.x, self.p2.x) - epsilon <= p.x <= max(self.p1.x, self.p2.x) + epsilon and \
        min(self.p1.y, self.p2.y) - epsilon <= p.y <= max(self.p1.y, self.p2.y) + epsilon and \
        min(l.p1.x, l.p2.x) - epsilon <= p.x <= max(l.p1.x, l.p2.x) + epsilon and \
        min(l.p1.y, l.p2.y) - epsilon <= p.y <= max(l.p1.y, l.p2.y) + epsilon:
