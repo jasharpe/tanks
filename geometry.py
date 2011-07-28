@@ -1,4 +1,4 @@
-import math
+import math, operator
 
 class Vector:
   def __init__(self, x, y):
@@ -23,13 +23,16 @@ class Vector:
   def __rmul__(self, s):
     return Vector(self.x * s, self.y * s)
 
+  def dot(self, v):
+    return self.x * v.x + self.y * v.y
+
   def angle(self):
     return math.atan2(self.y, self.x)
 
   def normalize(self):
     length = math.sqrt(self.x * self.x + self.y * self.y)
     if length == 0:
-      print "Attempted to normalize zero vector"
+      raise Exception("Attempted to normalize zero vector")
       return Vector(0, 0)
     return Vector(self.x / length, self.y / length)
 
@@ -79,8 +82,17 @@ class Line:
   def __repr__(self):
     return "Line(%s, %s)" % (self.p1, self.p2)
 
+  def as_vector(self):
+    return self.p2 - self.p1
+
   def length(self):
     return (self.p2 - self.p1).length()
+
+  # returns a normal to the line
+  def normal(self):
+    dx = self.p2.x - self.p1.x
+    dy = self.p2.y - self.p1.y
+    return Vector(dy, -dx).normalize()
 
   # returns the reflection of p across this line
   def reflect(self, p):
@@ -112,14 +124,14 @@ class Line:
   # (if the lines are parallel, or the line segments don't
   # actually intersect).
   def intersect_segments(self, l):
-    epsilon = 0.01
     p = self.intersect(l)
     if p is None:
       return None
-    if min(self.p1.x, self.p2.x) - epsilon <= p.x <= max(self.p1.x, self.p2.x) + epsilon and \
-       min(self.p1.y, self.p2.y) - epsilon <= p.y <= max(self.p1.y, self.p2.y) + epsilon and \
-       min(l.p1.x, l.p2.x) - epsilon <= p.x <= max(l.p1.x, l.p2.x) + epsilon and \
-       min(l.p1.y, l.p2.y) - epsilon <= p.y <= max(l.p1.y, l.p2.y) + epsilon:
+
+    if min(self.p1.x, self.p2.x) <= p.x <= max(self.p1.x, self.p2.x) and \
+       min(self.p1.y, self.p2.y) <= p.y <= max(self.p1.y, self.p2.y) and \
+       min(l.p1.x, l.p2.x) <= p.x <= max(l.p1.x, l.p2.x) and \
+       min(l.p1.y, l.p2.y) <= p.y <= max(l.p1.y, l.p2.y):
       return p
     else:
       return None

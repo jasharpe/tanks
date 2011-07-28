@@ -31,17 +31,44 @@ class Bullet(pygame.sprite.Sprite):
 
   # bounce off wall (which is a line segment).
   # traces movement of bullet backwards 
-  def bounce(self, wall):
-    line = Line(self.position, self.position.translate(self.vec))
-    self.position = wall.reflect(self.position)
-    self.old_position = wall.reflect(self.old_position)
-    p = line.intersect(wall)
-    self.direction = (self.position - p).angle()
-    self.travelled = Line(p, self.position)
-    self.reset_vec()
-    self.bounces += 1
+  def bounce(self, tiles):
+    while True:
+      if self.travelled.as_vector().length2() == 0:
+        return
 
-    self.update_graphics()
+      max_dist2 = -1.0
+      reflectors = []
+      for tile in tiles:
+        # if the distance between the bullet and the center of the tile is
+        # greater than the distance travelled by the bullet plus the
+        # size of the tile, then no collision could have occurred
+        if self.travelled.length() + math.sqrt(2) / 2 < (self.position - tile.position).length():
+          continue
+        
+        for tile_side in tile.get_sides():
+          # first check that we're coming from the right direction
+          if self.travelled.as_vector().normalize().dot(tile_side.normal()) > 0:
+            continue
+          p = self.travelled.intersect_segments(tile_side)
+          if not p is None:
+            if reflectors is None or (p - self.position).length2() > max_dist2:
+              reflectors = [(p, tile_side)]
+            elif (p - self.position).length2() == max_dist2:
+              reflectors.append((p, tile_side))
+      
+      if len(reflectors) == 1:
+        (p, wall) = reflectors[0]
+        self.position = wall.reflect(self.position)
+        self.direction = (self.position - p).angle()
+        self.travelled = Line(p, self.position)
+        self.reset_vec()
+        self.bounces += 1
+
+        self.update_graphics()
+      elif reflectors:
+        print "multiple reflectors!"
+      else:
+        break
 
   def update(self, delta):
     self.old_position = self.position

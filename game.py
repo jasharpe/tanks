@@ -2,7 +2,7 @@ import pygame
 import constants, math
 from tank import Tank, Turret
 from geometry import Vector, Point, Line, ORIGIN
-from tile import Tile
+from tile import Tile, TILE_RIGHT, TILE_LEFT, TILE_BOTTOM, TILE_TOP
 
 FPS = 60
 
@@ -21,6 +21,19 @@ class Board:
     for row in self.board:
       for tile in row:
         yield tile
+
+  def set_accessible(self, x, y, direction):
+    if 0 <= x < self.width and 0 <= y < self.height:
+      self.get_tile(x, y).set_accessible(direction, False)
+
+  def fix_accessibility(self):
+    for x in xrange(0, self.width):
+      for y in xrange(0, self.height):
+        if self.get_tile(x, y).solid:
+          self.set_accessible(x - 1, y, TILE_RIGHT)
+          self.set_accessible(x + 1, y, TILE_LEFT)
+          self.set_accessible(x, y - 1, TILE_BOTTOM)
+          self.set_accessible(x, y + 1, TILE_TOP)
 
   def set_tile(self, x, y, tile):
     self.board[x][y] = tile
@@ -44,32 +57,8 @@ def load_level(number):
     line = level_file.readline().strip()
     for j in range(0, width):
       board.set_tile(j, i, Tile(line[j], j, i))
+  board.fix_accessibility()
   return Level(player_start_x, player_start_y, board)
-
-def bullet_collides_with_tile(bullet, tile):
-  # if the distance between the bullet and the center of the tile is
-  # greater than the distance travelled by the bullet plus the
-  # size of the tile, then no collision could have occurred
-  if bullet.travelled.length() + math.sqrt(2) / 2 < (bullet.position - tile.position).length():
-    return []
-
-  tile_top_left = tile.position.translate(Vector(-0.5, -0.5))
-  tile_top_right = tile.position.translate(Vector(0.5, -0.5))
-  tile_bottom_right = tile.position.translate(Vector(0.5, 0.5))
-  tile_bottom_left = tile.position.translate(Vector(-0.5, 0.5))
-  tile_left = Line(tile_top_left, tile_bottom_left)
-  tile_right = Line(tile_top_right, tile_bottom_right)
-  tile_top = Line(tile_top_right, tile_top_left)
-  tile_bottom = Line(tile_bottom_right, tile_bottom_left)
-  tile_sides = [tile_left, tile_right, tile_top, tile_bottom]
-
-  intersects = []
-  for tile_side in tile_sides:
-    p = bullet.travelled.intersect_segments(tile_side)
-    if not p is None:
-      intersects.append((tile_side, p))
-
-  return intersects
 
 def tank_collides_with_tile(tank, tile):
   # if the rects don't even collide, then they don't collide
@@ -192,55 +181,7 @@ def main():
     # bounce off walls once, then explode on second contact
     
     for bullet in bullets:
-      bounced = True
-      while bounced:
-        intersects = []
-        for tile in solid:
-          tile_intersects = bullet_collides_with_tile(bullet, tile)
-          for (intersect, intersect_point) in tile_intersects:
-            intersects.append((tile, intersect, intersect_point))
-        
-        if not intersects:
-          bounced = False
-          break
-
-        print intersects
-
-        good_intersects = []
-        for (tile, intersect, intersect_point) in intersects:
-          # throw out any reflections that would end up with the bullet
-          # inside a tile.
-          include = True
-          for (other_tile, garbage1, garbage2) in intersects:
-            rect = pygame.Rect(other_tile.position.x - 0.5, other_tile.position.y - 0.5, 1, 1)
-            print rect, intersect.reflect(bullet.position)
-            if rect.collidepoint(intersect.reflect(bullet.position).as_tuple()):
-              print "don't include"
-              include = False
-              break
-              
-          if include:
-            good_intersects.append((tile, intersect, intersect_point))
-        
-        print good_intersects
-
-        closest = None
-        dist2 = 0
-        for (tile, intersect, intersect_point) in good_intersects:
-          if closest is None or (bullet.position - intersect_point).length2() < dist2:
-            closest = intersect
-            dist2 = (bullet.position - intersect_point).length2()
-
-        if not closest is None:
-          if bullet.has_bounces():
-            bullet.bounce(closest)
-          else:
-            bullet.remove(bullets)
-            #explosions.add(bullet.explode())
-            bounced = False
-        else:
-          bounced = False
-        
+      bullet.bounce(solid)       
 
     # draw
 
