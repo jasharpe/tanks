@@ -134,6 +134,7 @@ def main():
 
   #clock = pygame.time.Clock()
   last_update_time = pygame.time.get_ticks()
+  last_current_time = last_update_time
   skipped_draws = 0
   exit_program = False
   while True:
@@ -181,10 +182,15 @@ def main():
       turrets.update(delta)
       bullets.update(delta)
       shockwaves.update(delta)
+      explosions.update(delta)
 
       for shockwave in shockwaves:
         if shockwave.age > constants.SHOCKWAVE_DURATION:
           shockwave.remove(shockwaves)
+
+      for explosion in explosions:
+        if explosion.age > constants.EXPLOSION_DURATION:
+          explosion.remove(explosions)
 
       # fire!
       if fire:
@@ -196,15 +202,21 @@ def main():
       # bounce off walls once, then explode on second contact
       
       for bullet in bullets:
-        result = bullet.bounce(solid)
-        if result == EXPLODED:
+        if bullet.total_distance > constants.BULLET_MAX_RANGE:
+          explosions.add(Explosion(bullet.position.x, bullet.position.y))
           bullet.remove(bullets)
-        elif result == BOUNCED:
-          shockwaves.add(Shockwave(bullet.position.x, bullet.position.y))
+          bullet.die()
+        else:
+          result = bullet.bounce(solid)
+          if result == EXPLODED:
+            explosions.add(Explosion(bullet.position.x, bullet.position.y))
+            bullet.remove(bullets)
+            bullet.die()
+          elif result == BOUNCED:
+            shockwaves.add(Shockwave(bullet.position.x, bullet.position.y))
       
       last_update_time += FRAME_MS
 
-    if True or current_time - last_update_time < FRAME_MS or skipped_draws == MAX_SKIPPED_DRAWS:
       # draw
 
       screen.fill((0, 0, 0))
@@ -214,13 +226,18 @@ def main():
       bullets.draw(screen)
       turrets.draw(screen)
       shockwaves.draw(screen)
+      explosions.draw(screen)
       solid.draw(screen)
 
       pygame.display.flip()
 
       skipped_draws = 0
-    else:
-      skipped_draws += 1
+
+      #time = (current_time - last_current_time)
+      #if time > 1:
+        #print "Last frame took %d" % (time)
+    
+    last_current_time = current_time
 
 
   pygame.quit()

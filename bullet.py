@@ -9,7 +9,7 @@ class Bullet(pygame.sprite.Sprite):
   # position holds xy coordinates of the bullet as a Point
   # direction contains an angle in radians from the positive
   # x axis.
-  def __init__(self, x, y, direction):
+  def __init__(self, x, y, direction, owner):
     super(Bullet, self).__init__()
     
     self.original = pygame.Surface([constants.TILE_SIZE * constants.BULLET_WIDTH_RATIO, constants.TILE_SIZE * constants.BULLET_HEIGHT_RATIO], flags=pygame.SRCALPHA)
@@ -23,8 +23,14 @@ class Bullet(pygame.sprite.Sprite):
     self.reset_vec()
     self.bounces = 0
 
+    self.total_distance = 0.0
+    self.owner = owner
+
     self.travelled = Line(self.position, self.position)
     self.update_graphics()
+
+  def die(self):
+    self.owner.bullets -= 1
 
   def has_bounces(self):
     return self.bounces < 1
@@ -80,8 +86,9 @@ class Bullet(pygame.sprite.Sprite):
 
   def update(self, delta):
     self.old_position = self.position
-    self.position = self.position.translate(
-        (constants.BULLET_SPEED * delta / 1000.0) * self.vec)
+    displacement = (constants.BULLET_SPEED * delta / 1000.0) * self.vec
+    self.total_distance += displacement.length()
+    self.position = self.position.translate(displacement)
     self.travelled = Line(self.old_position, self.position)
     self.update_graphics()
 

@@ -35,3 +35,13 @@ TANK_COLOR = pygame.Color(20, 150, 20, 255)
 SHOCKWAVE_DURATION = 600
 SHOCKWAVE_MIN_RATIO = 0.2
 SHOCKWAVE_MAX_RATIO = 0.5
+
+EXPLOSION_MAX_RATIO = 0.5
+EXPLOSION_MIN_RATIO = 0.1
+EXPLOSION_DURATION = 200
+
+TANK_MAX_BULLETS = 3
+# number of milliseconds required between firings
+TANK_COOLDOWN = 500
+# the max range of a bullet in tiles before it explodes
+BULLET_MAX_RANGE = 15.0

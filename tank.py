@@ -22,6 +22,10 @@ class Tank(pygame.sprite.Sprite):
     # speed of the tank
     self.speed = 0.0
 
+    self.cooldown = 0
+
+    self.bullets = 0
+
   def revert(self):
     self.position = self.old_position
     self.direction = self.old_direction
@@ -29,6 +33,8 @@ class Tank(pygame.sprite.Sprite):
     self.update_graphics()
     
   def update(self, delta):
+    self.cooldown -= delta
+    self.cooldown = max(self.cooldown, 0)
     self.old_position = self.position
     self.position = self.position.translate(((delta / 1000.0) * self.speed) * Vector(math.cos(self.direction), math.sin(self.direction)).normalize())
     self.update_graphics()
@@ -86,8 +92,11 @@ class Turret(pygame.sprite.Sprite):
   # creates and returns a Bullet starting at the end of the Turret's
   # barrel and going in the direction of the barrel.
   def fire(self):
-    origin = self.tank.position.translate(Vector(constants.TURRET_LENGTH_RATIO / 2, 0)).rotate_about(self.direction + self.tank.direction, self.tank.position)
-    return Bullet(origin.x, origin.y, self.direction + self.tank.direction)
+    if self.tank.cooldown == 0 and self.tank.bullets < constants.TANK_MAX_BULLETS:
+      origin = self.tank.position.translate(Vector(constants.TURRET_LENGTH_RATIO / 2, 0)).rotate_about(self.direction + self.tank.direction, self.tank.position)
+      self.tank.bullets += 1
+      self.tank.cooldown = constants.TANK_COOLDOWN
+      return Bullet(origin.x, origin.y, self.direction + self.tank.direction, self.tank)
 
   # turn towards target point
   def turn(self, delta, target):
