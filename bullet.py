@@ -2,6 +2,9 @@ import pygame, math
 import constants
 from geometry import Vector, Point, Line
 
+BOUNCED = 1
+EXPLODED = 2
+
 class Bullet(pygame.sprite.Sprite):
   # position holds xy coordinates of the bullet as a Point
   # direction contains an angle in radians from the positive
@@ -24,7 +27,7 @@ class Bullet(pygame.sprite.Sprite):
     self.update_graphics()
 
   def has_bounces(self):
-    return self.bounces < 5
+    return self.bounces < 1
 
   def reset_vec(self):
     self.vec = Vector(math.cos(self.direction), math.sin(self.direction)).normalize()
@@ -57,14 +60,19 @@ class Bullet(pygame.sprite.Sprite):
               reflectors.append((p, tile_side))
       
       if len(reflectors) == 1:
-        (p, wall) = reflectors[0]
-        self.position = wall.reflect(self.position)
-        self.direction = (self.position - p).angle()
-        self.travelled = Line(p, self.position)
-        self.reset_vec()
-        self.bounces += 1
+        if self.has_bounces(): 
+          (p, wall) = reflectors[0]
+          self.position = wall.reflect(self.position)
+          self.direction = (self.position - p).angle()
+          self.travelled = Line(p, self.position)
+          self.reset_vec()
+          self.bounces += 1
 
-        self.update_graphics()
+          self.update_graphics()
+
+          return BOUNCED
+        else:
+          return EXPLODED
       elif reflectors:
         print "multiple reflectors!"
       else:

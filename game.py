@@ -3,8 +3,11 @@ import constants, math
 from tank import Tank, Turret
 from geometry import Vector, Point, Line, ORIGIN
 from tile import Tile, TILE_RIGHT, TILE_LEFT, TILE_BOTTOM, TILE_TOP
+from bullet import BOUNCED, EXPLODED
+from explosion import Shockwave, Explosion
 
-FPS = 60
+FRAME_MS = 16
+MAX_SKIPPED_DRAWS = 5
 
 class Board:
   def __init__(self, width, height):
@@ -119,79 +122,106 @@ def main():
   for tile in level.board:
     tiles.add(tile)
   solid = pygame.sprite.RenderPlain()
+  non_solid = pygame.sprite.RenderPlain()
   for tile in tiles:
     if tile.solid:
       solid.add(tile)
+    else:
+      non_solid.add(tile)
   bullets = pygame.sprite.RenderPlain()
-  shocks = pygame.sprite.RenderPlain()
+  shockwaves = pygame.sprite.RenderPlain()
   explosions = pygame.sprite.RenderPlain()
 
-  clock = pygame.time.Clock()
+  #clock = pygame.time.Clock()
+  last_update_time = pygame.time.get_ticks()
+  skipped_draws = 0
   exit_program = False
   while True:
-    delta = clock.tick(FPS)
+    current_time = pygame.time.get_ticks()
+    if current_time - last_update_time >= FRAME_MS:
+      delta = FRAME_MS
 
-    # update
+      # update
 
-    # event handling
-    fire = False
-    for event in pygame.event.get():
-      if event.type == pygame.QUIT:
-        exit_program = True
-      elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-        fire = True
-    
-    # control handling
-    pressed = pygame.key.get_pressed()
-    if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
-      player.turn_left(delta)
-    elif pressed[pygame.K_RIGHT] or pressed[pygame.K_d]:
-      player.turn_right(delta)
-    if pressed[pygame.K_UP] or pressed[pygame.K_w]:
-      player.accelerate(delta)
-    elif pressed[pygame.K_DOWN] or pressed[pygame.K_s]:
-      player.decelerate(delta)
+      # event handling
+      fire = False
+      for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+          exit_program = True
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+          fire = True
+      
+      # control handling
+      pressed = pygame.key.get_pressed()
+      if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
+        player.turn_left(delta)
+      elif pressed[pygame.K_RIGHT] or pressed[pygame.K_d]:
+        player.turn_right(delta)
+      if pressed[pygame.K_UP] or pressed[pygame.K_w]:
+        player.accelerate(delta)
+      elif pressed[pygame.K_DOWN] or pressed[pygame.K_s]:
+        player.decelerate(delta)
+      else:
+        player.neutral(delta)
+
+      if exit_program:
+        break
+     
+      tanks.update(delta)
+      for tile in solid:
+        intersects = tank_collides_with_tile(player, tile)
+        if len(intersects) > 0:
+          player.revert()
+
+      # turret control
+      # mouse position
+      m_p = pygame.mouse.get_pos()
+      turret.turn(delta, Point(float(m_p[0]) / constants.TILE_SIZE, float(m_p[1]) / constants.TILE_SIZE))
+
+      turrets.update(delta)
+      bullets.update(delta)
+      shockwaves.update(delta)
+
+      for shockwave in shockwaves:
+        if shockwave.age > constants.SHOCKWAVE_DURATION:
+          shockwave.remove(shockwaves)
+
+      # fire!
+      if fire:
+        bullet = turret.fire()
+        if not bullet is None:
+          bullets.add(bullet)
+
+      # do bullet collision detection
+      # bounce off walls once, then explode on second contact
+      
+      for bullet in bullets:
+        result = bullet.bounce(solid)
+        if result == EXPLODED:
+          bullet.remove(bullets)
+        elif result == BOUNCED:
+          shockwaves.add(Shockwave(bullet.position.x, bullet.position.y))
+      
+      last_update_time += FRAME_MS
+
+    if True or current_time - last_update_time < FRAME_MS or skipped_draws == MAX_SKIPPED_DRAWS:
+      # draw
+
+      screen.fill((0, 0, 0))
+      
+      non_solid.draw(screen)
+      tanks.draw(screen)
+      bullets.draw(screen)
+      turrets.draw(screen)
+      shockwaves.draw(screen)
+      solid.draw(screen)
+
+      pygame.display.flip()
+
+      skipped_draws = 0
     else:
-      player.neutral(delta)
+      skipped_draws += 1
 
-    if exit_program:
-      break
-   
-    tanks.update(delta)
-    for tile in solid:
-      intersects = tank_collides_with_tile(player, tile)
-      if len(intersects) > 0:
-        player.revert()
-
-    # turret control
-    # mouse position
-    m_p = pygame.mouse.get_pos()
-    turret.turn(delta, Point(float(m_p[0]) / constants.TILE_SIZE, float(m_p[1]) / constants.TILE_SIZE))
-
-    turrets.update(delta)
-    bullets.update(delta)
-
-    # fire!
-    if fire:
-      bullet = turret.fire()
-      if not bullet is None:
-        bullets.add(bullet)
-
-    # do bullet collision detection
-    # bounce off walls once, then explode on second contact
-    
-    for bullet in bullets:
-      bullet.bounce(solid)       
-
-    # draw
-
-    screen.fill((0, 0, 0))
-    tiles.draw(screen)
-    tanks.draw(screen)
-    bullets.draw(screen)
-    turrets.draw(screen)
-
-    pygame.display.flip()
 
   pygame.quit()
 
