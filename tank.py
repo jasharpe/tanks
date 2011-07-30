@@ -1,6 +1,6 @@
 import pygame, math, random
 import constants
-from geometry import Vector, Point
+from geometry import Vector, Point, Line, ORIGIN
 from bullet import Bullet
 
 class Tank(pygame.sprite.Sprite):
@@ -77,6 +77,49 @@ class Tank(pygame.sprite.Sprite):
     self.direction += 2 * math.pi * delta / (constants.TANK_TURNING_SPEED * 1000.0)
     if self.direction > math.pi:
       self.direction -= 2 * math.pi
+
+  def collides_with_tile(self, tiles):
+    for tile in tiles:
+      # if the rects don't even collide, then they don't collide
+      if not pygame.sprite.collide_rect(self, tile):
+        continue
+      
+      # otherwise, have to verify collision in case of turned tank
+      half_width = constants.TANK_SIZE_RATIO / 2
+      half_height = constants.TANK_SIZE_RATIO / 2
+      minus_center = ORIGIN - self.position
+      plus_center = self.position - ORIGIN
+      back_left = self.position.translate(Vector(-half_width, -half_height)).translate(minus_center).rotate(self.direction).translate(plus_center)
+      front_left = self.position.translate(Vector(half_width, -half_height)).translate(minus_center).rotate(self.direction).translate(plus_center)
+      back_right = self.position.translate(Vector(-half_width, half_height)).translate(minus_center).rotate(self.direction).translate(plus_center)
+      front_right = self.position.translate(Vector(half_width, half_height)).translate(minus_center).rotate(self.direction).translate(plus_center)
+      front = Line(front_left, front_right)
+      back = Line(back_left, back_right)
+      left = Line(back_left, front_left)
+      right = Line(back_right, front_right)
+      sides = [front, back, left, right]
+
+      tile_top_left = tile.position.translate(Vector(-0.5, -0.5))
+      tile_top_right = tile.position.translate(Vector(0.5, -0.5))
+      tile_bottom_right = tile.position.translate(Vector(0.5, 0.5))
+      tile_bottom_left = tile.position.translate(Vector(-0.5, 0.5))
+      tile_left = Line(tile_top_left, tile_bottom_left)
+      tile_right = Line(tile_top_right, tile_bottom_right)
+      tile_top = Line(tile_top_right, tile_top_left)
+      tile_bottom = Line(tile_bottom_right, tile_bottom_left)
+      tile_sides = [tile_left, tile_right, tile_top, tile_bottom]
+
+      intersects = []
+      for side in sides:
+        for tile_side in tile_sides:
+          p = side.intersect_segments(tile_side)
+          if not p is None:
+            intersects.append((side, tile_side, p))
+
+      if intersects:
+        return True
+
+    return False
 
 class Turret(pygame.sprite.Sprite):
   def __init__(self, tank):

@@ -41,9 +41,10 @@ class Bullet(pygame.sprite.Sprite):
   # bounce off wall (which is a line segment).
   # traces movement of bullet backwards 
   def bounce(self, tiles):
+    results = []
     while True:
       if self.travelled.as_vector().length2() == 0:
-        return
+        return results
 
       max_dist2 = -1.0
       reflectors = []
@@ -62,7 +63,7 @@ class Bullet(pygame.sprite.Sprite):
           if not p is None:
             if reflectors is None or (p - self.position).length2() > max_dist2:
               reflectors = [(p, tile_side)]
-            elif (p - self.position).length2() == max_dist2:
+            elif max_dist2 < (p - self.position).length2() <= max_dist2:
               reflectors.append((p, tile_side))
       
       if len(reflectors) == 1:
@@ -76,13 +77,15 @@ class Bullet(pygame.sprite.Sprite):
 
           self.update_graphics()
 
-          return BOUNCED
+          results.append((BOUNCED, self.position))
         else:
-          return EXPLODED
+          results.append((EXPLODED, self.position))
+          break
       elif reflectors:
         print "multiple reflectors!"
       else:
         break
+    return results
 
   def update(self, delta):
     self.old_position = self.position
