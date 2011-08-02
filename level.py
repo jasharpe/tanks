@@ -1,5 +1,6 @@
-import pygame
+import pygame, os
 import constants
+from ai import *
 from board import Board
 from tile import Tile, TILE_RIGHT, TILE_LEFT, TILE_BOTTOM, TILE_TOP
 from geometry import Vector, Point, Line, ORIGIN
@@ -8,21 +9,60 @@ from bullet import BOUNCED, EXPLODED
 from explosion import Explosion, Shockwave
 
 def load_level(number):
-  level_file = open("levels/level%d.dat" % (number), "r")
-  player_start_x = int(level_file.readline().strip())
-  player_start_y = int(level_file.readline().strip())
-  height = int(level_file.readline().strip())
-  width = int(level_file.readline().strip())
+  level_file = open(os.path.join(constants.DATA_DIR, "level%d.dat" % (number)), "r")
+
+  # read from level file, allowing comments starting with '#' and blank lines,
+  # returning the first meaningful line, stripped of its new line character.
+  def read():
+    line = None
+    while line is None or line is "" or line.isspace() or line.startswith("#"):
+      line = level_file.readline().strip()
+    return line
+
+  # board size
+  height = int(read())
+  width = int(read())
+
+  # player start position
+  player_start_x = int(read())
+  player_start_y = int(read())
+  if not (0 <= player_start_x < width) or \
+     not (0 <= player_start_y < height):
+    raise Exception("Player start position (%d, %d) outside board." % (player_start_x, player_start_y))
+  
+  # enemies
+  num_enemies = int(read())
+  enemies = []
+  for i in xrange(0, num_enemies):
+    x = int(read())
+    y = int(read())
+    if not (0 <= x < width) or \
+       not (0 <= y < height):
+      raise Exception("Enemy start position (%d, %d) outside board." % (x, y))
+    enemies.append((x, y))
+
+  # tiles
   board = Board(width, height)
   for i in range(0, height):
-    line = level_file.readline().strip()
+    line = read()
     for j in range(0, width):
-      board.set_tile(j, i, Tile(line[j], j, i))
+      tile = Tile(line[j], j, i)
+      if tile.solid:
+        if i is player_start_y and j is player_start_x:
+          raise Exception("Player start position (%d, %d) is inside a solid tile." % (player_start_x, player_start_y))
+        for (x, y) in enemies:
+          if i is y and j is x:
+            raise Exception("Enemy start position (%d, %d) is inside a solid tile." % (x, y))
+      board.set_tile(j, i, tile)
+
+  # let each tile know if its walls are accessible (i.e., if they are blocked
+  # by another tile or not)
   board.fix_accessibility()
-  return Level(player_start_x, player_start_y, board)
+
+  return Level(player_start_x, player_start_y, board, enemies)
 
 class Level:
-  def __init__(self, player_start_x, player_start_y, board):
+  def __init__(self, player_start_x, player_start_y, board, enemies):
     self.player_start = Point(player_start_x, player_start_y)
     self.board = board
 
@@ -33,6 +73,18 @@ class Level:
     self.tanks.add(self.player)
     self.turret = Turret(self.player)
     self.turrets.add(self.turret)
+
+    self.enemies = pygame.sprite.RenderPlain()
+    self.enemy_turrets = pygame.sprite.RenderPlain()
+    self.enemy_ai = []
+    self.enemy_turret_ai = []
+    for (x, y) in enemies:
+      enemy = Tank(x, y, constants.ENEMY_TANK_COLOR)
+      self.enemy_ai.append(TankAI(enemy, self))
+      enemy_turret = Turret(enemy)
+      self.enemies.add(enemy)
+      self.enemy_turrets.add(enemy_turret)
+      self.enemy_turret_ai.append(TurretAI(enemy_turret, self))
 
     self.tiles = pygame.sprite.RenderPlain()
     for tile in self.board:
@@ -75,11 +127,40 @@ class Level:
     if self.player.collides_with_tile(self.solid):
       self.player.revert()
 
+    # AI control of enemy tanks
+    for enemy_ai in self.enemy_ai:
+      enemy_ai.control(delta)
+
+    # update enemies
+    self.enemies.update(delta)
+    for enemy in self.enemies:
+      if enemy.collides_with_tile(self.solid):
+        enemy.revert()
+
+    # check for tank to tank collisions
+    for enemy in self.enemies:
+      if enemy.collides_with_tank(self.player):
+        self.player.revert()
+        enemy.revert()
+
+    # turret AI
+    for turret_ai in self.enemy_turret_ai:
+      bullet = turret_ai.control(delta)
+      if bullet is not None:
+        self.bullets.add(bullet)
+
     # turret control
     # mouse position
     m_p = self.mouse
     self.turret.turn(delta, Point(float(m_p[0]) / constants.TILE_SIZE, float(m_p[1]) / constants.TILE_SIZE))
 
+    # fire!
+    if fire:
+      bullet = self.turret.fire()
+      if not bullet is None:
+        self.bullets.add(bullet)
+
+    self.enemy_turrets.update(delta)
     self.turrets.update(delta)
     self.bullets.update(delta)
     self.shockwaves.update(delta)
@@ -93,12 +174,6 @@ class Level:
       if explosion.age > constants.EXPLOSION_DURATION:
         explosion.remove(self.explosions)
 
-    # fire!
-    if fire:
-      bullet = self.turret.fire()
-      if not bullet is None:
-        self.bullets.add(bullet)
-
     # do bullet collision detection
     # bounce off walls once, then explode on second contact
     
@@ -111,7 +186,7 @@ class Level:
         results = bullet.bounce(self.solid)
         for (result, position) in results:
           if result == EXPLODED:
-            self.explosions.add(Explosion(position.x, position.y))
+            self.explosions.add(Explosion(bullet.old_position.x, bullet.old_position.y))
             bullet.remove(self.bullets)
             bullet.die()
           elif result == BOUNCED:
@@ -121,6 +196,8 @@ class Level:
     self.non_solid.draw(screen)
     self.tanks.draw(screen)
     self.turrets.draw(screen)
+    self.enemies.draw(screen)
+    self.enemy_turrets.draw(screen)
     self.shockwaves.draw(screen)
     self.explosions.draw(screen)
     self.solid.draw(screen)

@@ -128,10 +128,10 @@ class Line:
     if p is None:
       return None
 
-    if min(self.p1.x, self.p2.x) <= p.x <= max(self.p1.x, self.p2.x) and \
-       min(self.p1.y, self.p2.y) <= p.y <= max(self.p1.y, self.p2.y) and \
-       min(l.p1.x, l.p2.x) <= p.x <= max(l.p1.x, l.p2.x) and \
-       min(l.p1.y, l.p2.y) <= p.y <= max(l.p1.y, l.p2.y):
+    if (min(self.p1.x, self.p2.x) <= p.x <= max(self.p1.x, self.p2.x) or self.p1.x == self.p2.x) and \
+       (min(self.p1.y, self.p2.y) <= p.y <= max(self.p1.y, self.p2.y) or self.p1.y == self.p2.y) and \
+       (min(l.p1.x, l.p2.x) <= p.x <= max(l.p1.x, l.p2.x) or l.p1.x == l.p2.x) and \
+       (min(l.p1.y, l.p2.y) <= p.y <= max(l.p1.y, l.p2.y) or l.p1.y == l.p2.y):
       return p
     else:
       return None

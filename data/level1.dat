@@ -1,7 +1,22 @@
-1
-1
+# board size
 16
 16
+
+# start position
+# x
+1
+# y
+1
+
+# ENEMIES
+
+# number of enemies
+1
+5
+5
+
+# tiles
+# W is a wall, G is ground
 WWWWWWWWWWWWWWWW
 WGGGGGGGGGGWGGGW
 WGGGGGGGGGGGGGGW
