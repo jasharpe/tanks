@@ -11,14 +11,18 @@ class TurretAI:
 
   def control(self, delta):
     # the turret want to always be pointing at the player
-    self.turret.turn(delta, self.level.player.position)
+    if not self.level.player.dead:
+      self.turret.turn(delta, self.level.player.position)
 
-    if self.cooldown == 0:
-      self.cooldown = TIME_BETWEEN_FIRING
-      return self.turret.fire()
+      if self.cooldown == 0:
+        self.cooldown = TIME_BETWEEN_FIRING
+        return None
+        #return self.turret.fire()
+      else:
+        self.cooldown -= delta
+        self.cooldown = max(0, self.cooldown)
     else:
-      self.cooldown -= delta
-      self.cooldown = max(0, self.cooldown)
+      self.turret.turn_direction(delta, self.turret.tank.direction)
 
 class TankAI:
   def __init__(self, tank, level):
@@ -26,4 +30,5 @@ class TankAI:
     self.level = level
 
   def control(self, delta):
-    self.tank.accelerate(delta)
+    pass
+    #self.tank.accelerate(delta)

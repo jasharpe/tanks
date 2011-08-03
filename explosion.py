@@ -29,12 +29,15 @@ class Shockwave(pygame.sprite.Sprite):
     self.rect = self.image.get_rect(center=(constants.TILE_SIZE * self.position.x, constants.TILE_SIZE * self.position.y))
 
 class Explosion(pygame.sprite.Sprite):
-  def __init__(self, x, y):
+  def __init__(self, x, y, explosion_max_ratio=constants.EXPLOSION_MAX_RATIO, explosion_min_ratio=constants.EXPLOSION_MIN_RATIO):
     super(Explosion, self).__init__()
 
     self.original = pygame.image.load("explosion.png").convert_alpha()
     self.image = self.original
     self.age = 0
+
+    self.explosion_max_ratio = explosion_max_ratio
+    self.explosion_min_ratio = explosion_min_ratio
 
     self.position = Point(x, y)
     self.update_graphics()
@@ -50,7 +53,7 @@ class Explosion(pygame.sprite.Sprite):
     # interpolate from 0 to 1 to 0 so the shockwave explodes then shrinks
     a = 1 - 2 * abs(t - 0.5)
     #a = t
-    multiplier = a * constants.EXPLOSION_MAX_RATIO + (1 - a) * constants.EXPLOSION_MIN_RATIO
+    multiplier = a * self.explosion_max_ratio + (1 - a) * self.explosion_min_ratio
     radius = int(round(multiplier * constants.TILE_SIZE))
     self.image = pygame.transform.smoothscale(self.original, (radius, radius))
     self.image.set_alpha(255 * a)

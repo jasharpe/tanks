@@ -12,8 +12,13 @@
 
 # number of enemies
 1
-5
-5
+# first enemy
+4
+1
+# first enemy waypoints
+#5
+#5
+
 
 # tiles
 # W is a wall, G is ground

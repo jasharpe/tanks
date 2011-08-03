@@ -4,7 +4,7 @@ from ai import *
 from board import Board
 from tile import Tile, TILE_RIGHT, TILE_LEFT, TILE_BOTTOM, TILE_TOP
 from geometry import Vector, Point, Line, ORIGIN
-from tank import Tank, Turret
+from tank import Tank, Turret, TANK_EXPLODED
 from bullet import BOUNCED, EXPLODED
 from explosion import Explosion, Shockwave
 
@@ -112,22 +112,24 @@ class Level:
         fire = True
 
     pressed = self.pressed
-    if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
-      self.player.turn_left(delta)
-    elif pressed[pygame.K_RIGHT] or pressed[pygame.K_d]:
-      self.player.turn_right(delta)
-    if pressed[pygame.K_UP] or pressed[pygame.K_w]:
-      self.player.accelerate(delta)
-    elif pressed[pygame.K_DOWN] or pressed[pygame.K_s]:
-      self.player.decelerate(delta)
-    else:
-      self.player.neutral(delta)
+    if not self.player.dead:
+      if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
+        self.player.turn_left(delta)
+      elif pressed[pygame.K_RIGHT] or pressed[pygame.K_d]:
+        self.player.turn_right(delta)
+      if pressed[pygame.K_UP] or pressed[pygame.K_w]:
+        self.player.accelerate(delta)
+      elif pressed[pygame.K_DOWN] or pressed[pygame.K_s]:
+        self.player.decelerate(delta)
+      else:
+        self.player.neutral(delta)
 
-    self.tanks.update(delta)
-    if self.player.collides_with_tile(self.solid):
-      self.player.revert()
+      self.tanks.update(delta)
+      if self.player.collides_with_tile(self.solid):
+        self.player.revert()
 
     # AI control of enemy tanks
+    self.enemy_ai = filter(lambda x: x.tank in self.enemies, self.enemy_ai)
     for enemy_ai in self.enemy_ai:
       enemy_ai.control(delta)
 
@@ -139,11 +141,12 @@ class Level:
 
     # check for tank to tank collisions
     for enemy in self.enemies:
-      if enemy.collides_with_tank(self.player):
+      if not self.player.dead and enemy.collides_with_tank(self.player):
         self.player.revert()
         enemy.revert()
 
     # turret AI
+    self.enemy_turret_ai = filter(lambda x: x.turret in self.enemy_turrets, self.enemy_turret_ai)
     for turret_ai in self.enemy_turret_ai:
       bullet = turret_ai.control(delta)
       if bullet is not None:
@@ -152,13 +155,14 @@ class Level:
     # turret control
     # mouse position
     m_p = self.mouse
-    self.turret.turn(delta, Point(float(m_p[0]) / constants.TILE_SIZE, float(m_p[1]) / constants.TILE_SIZE))
+    if not self.player.dead:
+      self.turret.turn(delta, Point(float(m_p[0]) / constants.TILE_SIZE, float(m_p[1]) / constants.TILE_SIZE))
 
-    # fire!
-    if fire:
-      bullet = self.turret.fire()
-      if not bullet is None:
-        self.bullets.add(bullet)
+      # fire!
+      if fire:
+        bullet = self.turret.fire()
+        if not bullet is None:
+          self.bullets.add(bullet)
 
     self.enemy_turrets.update(delta)
     self.turrets.update(delta)
@@ -178,10 +182,56 @@ class Level:
     # bounce off walls once, then explode on second contact
     
     for bullet in self.bullets:
+      # check for bullet/tank collisions
+      if bullet.dead: continue
+
+      if not self.player.dead and bullet.collides_with_tank(self.player):
+        # do something to the player
+        result = self.player.hurt()
+        if result is TANK_EXPLODED:
+          self.explosions.add(Explosion(self.player.position.x, self.player.position.y, constants.BIG_EXPLOSION_MAX_RATIO, constants.BIG_EXPLOSION_MIN_RATIO))
+          self.player.remove(self.tanks)
+          self.player.turret.remove(self.turrets)
+
+        # explode the bullet
+        self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
+        bullet.remove(self.bullets)
+        bullet.die()
+      if bullet.dead: continue
+
+      for enemy in self.enemies:
+        if bullet.collides_with_tank(enemy):
+          # damage the enemy
+          result = enemy.hurt()
+          if result is TANK_EXPLODED:
+            self.explosions.add(Explosion(enemy.position.x, enemy.position.y, constants.BIG_EXPLOSION_MAX_RATIO, constants.BIG_EXPLOSION_MIN_RATIO))
+            enemy.remove(self.enemies)
+            enemy.turret.remove(self.enemy_turrets)
+
+          # explode the bullet
+          self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
+          bullet.remove(self.bullets)
+          bullet.die()
+          break
+      if bullet.dead: continue
+
+      # check for bullet/bullet collisions
+      for bullet2 in filter(lambda x: x is not bullet, self.bullets):
+        if bullet.collides_with_bullet(bullet2):
+          self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
+          bullet.remove(self.bullets)
+          bullet.die()
+          self.explosions.add(Explosion(bullet2.position.x, bullet2.position.y))
+          bullet2.remove(self.bullets)
+          bullet2.die()
+      if bullet.dead: continue
+
+      # check for bullets reaching max range
       if bullet.total_distance > constants.BULLET_MAX_RANGE:
         self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
         bullet.remove(self.bullets)
         bullet.die()
+      # check for bullet bounces or wall collisions
       else:
         results = bullet.bounce(self.solid)
         for (result, position) in results:
@@ -191,6 +241,7 @@ class Level:
             bullet.die()
           elif result == BOUNCED:
             self.shockwaves.add(Shockwave(position.x, position.y))
+      if bullet.dead: continue
 
   def draw(self, screen):
     self.non_solid.draw(screen)

@@ -3,9 +3,13 @@ import constants
 from geometry import Vector, Point, Line, ORIGIN
 from bullet import Bullet
 
+TANK_EXPLODED = 1
+
 class Tank(pygame.sprite.Sprite):
   def __init__(self, x, y, color=constants.TANK_COLOR):
     pygame.sprite.Sprite.__init__(self)
+
+    self.color = color
 
     self.original = pygame.Surface([constants.TILE_SIZE * constants.TANK_SIZE_RATIO, constants.TILE_SIZE * constants.TANK_SIZE_RATIO], flags=pygame.SRCALPHA)
     self.original.fill(color)
@@ -21,10 +25,25 @@ class Tank(pygame.sprite.Sprite):
     self.old_direction = self.direction
     # speed of the tank
     self.speed = 0.0
-
     self.cooldown = 0
 
     self.bullets = 0
+    self.turret = None
+
+    self.health = constants.TANK_HEALTH
+    self.dead = False
+
+  def hurt(self):
+    self.health -= 1
+    if self.health == 0:
+      self.dead = True
+      return TANK_EXPLODED
+    else:
+      self.original = pygame.Surface([constants.TILE_SIZE * constants.TANK_SIZE_RATIO, constants.TILE_SIZE * constants.TANK_SIZE_RATIO], flags=pygame.SRCALPHA)
+      diff = 20 * (constants.TANK_HEALTH - self.health)
+      new_color = pygame.Color(max(0, self.color.r - diff), max(0, self.color.g - diff), max(0, self.color.b - diff))
+      self.original.fill(new_color)
+      self.update_graphics()
 
   # this returns the tank to its position before the last update()
   # call. It is important that this be idempotent.
@@ -33,7 +52,7 @@ class Tank(pygame.sprite.Sprite):
     self.direction = self.old_direction
     self.speed = 0.0
     self.update_graphics()
-    
+
   def update(self, delta):
     self.cooldown -= delta
     self.cooldown = max(self.cooldown, 0)
@@ -104,7 +123,6 @@ class Tank(pygame.sprite.Sprite):
     for side in this_sides:
       for other_side in other_sides:
         p = side.intersect_segments(other_side)
-        print p
         if p is not None:
           return True
     
@@ -139,6 +157,7 @@ class Turret(pygame.sprite.Sprite):
     self.direction = 0.0
 
     self.tank = tank
+    tank.turret = self
 
   # creates and returns a Bullet starting at the end of the Turret's
   # barrel and going in the direction of the barrel.
@@ -155,6 +174,10 @@ class Turret(pygame.sprite.Sprite):
     d = target - self.tank.position
     # target angle
     t_a = d.angle()
+    return self.turn_direction(delta, t_a)
+    
+  def turn_direction(self, delta, target_direction):
+    t_a = target_direction
     # current angle
     c_a = self.direction + self.tank.direction
     difference = t_a - c_a
