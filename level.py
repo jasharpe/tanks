@@ -163,6 +163,7 @@ class Level:
     for turret_ai in self.enemy_turret_ai:
       bullet = turret_ai.control(delta)
       if bullet is not None:
+        play_sound("fire")
         self.bullets.add(bullet)
 
     # turret control
@@ -175,6 +176,7 @@ class Level:
       if fire:
         bullet = self.turret.fire()
         if not bullet is None:
+          play_sound("fire")
           self.bullets.add(bullet)
 
     self.enemy_turrets.update(delta)
