@@ -13,11 +13,24 @@
 # number of enemies
 1
 # first enemy
+5
+5
+# number of waypoints
 4
-1
-# first enemy waypoints
-#5
-#5
+# type of waypoints
+LOOP
+# 1
+5
+5
+# 2
+9
+5
+# 3
+9
+10
+# 4
+5
+10
 
 
 # tiles

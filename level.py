@@ -40,7 +40,19 @@ def load_level(number):
     if not (0 <= x < width) or \
        not (0 <= y < height):
       raise Exception("Enemy start position (%d, %d) outside board." % (x, y))
-    enemies.append((x, y))
+    
+    # waypoints
+    waypoints = []
+    num_waypoints = int(read())
+    waypoint_type = None
+    if num_waypoints > 0:
+      waypoint_type = read()
+    for j in xrange(0, num_waypoints):
+      w_x = int(read())
+      w_y = int(read())
+      waypoints.append(Point(w_x + 0.5, w_y + 0.5))
+
+    enemies.append((x, y, waypoints, waypoint_type))
 
   # tiles
   board = Board(width, height)
@@ -51,7 +63,7 @@ def load_level(number):
       if tile.solid:
         if i is player_start_y and j is player_start_x:
           raise Exception("Player start position (%d, %d) is inside a solid tile." % (player_start_x, player_start_y))
-        for (x, y) in enemies:
+        for (x, y, waypoints, waypoint_type) in enemies:
           if i is y and j is x:
             raise Exception("Enemy start position (%d, %d) is inside a solid tile." % (x, y))
       board.set_tile(j, i, tile)
@@ -79,9 +91,9 @@ class Level:
     self.enemy_turrets = pygame.sprite.RenderPlain()
     self.enemy_ai = []
     self.enemy_turret_ai = []
-    for (x, y) in enemies:
+    for (x, y, waypoints, waypoint_type) in enemies:
       enemy = Tank(x, y, constants.ENEMY_TANK_COLOR)
-      self.enemy_ai.append(TankAI(enemy, self))
+      self.enemy_ai.append(TankAI(enemy, self, waypoints, waypoint_type))
       enemy_turret = Turret(enemy)
       self.enemies.add(enemy)
       self.enemy_turrets.add(enemy_turret)
