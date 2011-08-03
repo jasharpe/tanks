@@ -13,6 +13,7 @@ MAX_SKIPPED_DRAWS = 5
 LEVEL = 1
 
 def main():
+  pygame.mixer.pre_init(frequency=22050, size=-16, channels=8, buffer=512)
   pygame.init()
   screen = pygame.display.set_mode(
       [constants.RESOLUTION_X, constants.RESOLUTION_Y])

@@ -7,6 +7,7 @@ from geometry import Vector, Point, Line, ORIGIN
 from tank import Tank, Turret, TANK_EXPLODED
 from bullet import BOUNCED, EXPLODED
 from explosion import Explosion, Shockwave
+from sound import play_sound
 
 def load_level(number):
   level_file = open(os.path.join(constants.DATA_DIR, "level%d.dat" % (number)), "r")
@@ -189,9 +190,12 @@ class Level:
         # do something to the player
         result = self.player.hurt()
         if result is TANK_EXPLODED:
+          play_sound("tank_explode")
           self.explosions.add(Explosion(self.player.position.x, self.player.position.y, constants.BIG_EXPLOSION_MAX_RATIO, constants.BIG_EXPLOSION_MIN_RATIO))
           self.player.remove(self.tanks)
           self.player.turret.remove(self.turrets)
+        else:
+          play_sound("bullet_explode")
 
         # explode the bullet
         self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
@@ -204,9 +208,12 @@ class Level:
           # damage the enemy
           result = enemy.hurt()
           if result is TANK_EXPLODED:
+            play_sound("tank_explode")
             self.explosions.add(Explosion(enemy.position.x, enemy.position.y, constants.BIG_EXPLOSION_MAX_RATIO, constants.BIG_EXPLOSION_MIN_RATIO))
             enemy.remove(self.enemies)
             enemy.turret.remove(self.enemy_turrets)
+          else:
+            play_sound("bullet_explode")
 
           # explode the bullet
           self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
@@ -218,6 +225,7 @@ class Level:
       # check for bullet/bullet collisions
       for bullet2 in filter(lambda x: x is not bullet, self.bullets):
         if bullet.collides_with_bullet(bullet2):
+          play_sound("bullet_explode")
           self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
           bullet.remove(self.bullets)
           bullet.die()
@@ -228,6 +236,7 @@ class Level:
 
       # check for bullets reaching max range
       if bullet.total_distance > constants.BULLET_MAX_RANGE:
+        play_sound("bullet_explode")
         self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
         bullet.remove(self.bullets)
         bullet.die()
@@ -236,10 +245,12 @@ class Level:
         results = bullet.bounce(self.solid)
         for (result, position) in results:
           if result == EXPLODED:
+            play_sound("bullet_explode")
             self.explosions.add(Explosion(bullet.old_position.x, bullet.old_position.y))
             bullet.remove(self.bullets)
             bullet.die()
           elif result == BOUNCED:
+            play_sound("pong", 0.35)
             self.shockwaves.add(Shockwave(position.x, position.y))
       if bullet.dead: continue
 
