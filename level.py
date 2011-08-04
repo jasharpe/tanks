@@ -8,8 +8,37 @@ from tank import Tank, Turret, TANK_EXPLODED
 from bullet import BOUNCED, EXPLODED
 from explosion import Explosion, Shockwave
 from sound import play_sound
+from game_event import RestartLevelEvent, AdvanceLevelEvent
 
-def load_level(number):
+LEVEL_ONGOING = 1
+LEVEL_BEATEN = 2
+LEVEL_LOST = 3
+
+class TimedLevelAdvance:
+  def __init__(self, time, level):
+    self.level = level
+    self.time_left = time
+
+  def update(self, delta):
+    self.time_left -= delta
+    self.time_left = max(0, self.time_left)
+    if self.time_left == 0:
+      self.level.game.register_event(AdvanceLevelEvent(self.level))
+
+class TimedLevelRestart:
+  def __init__(self, time, level):
+    self.level = level
+    self.time_left = time
+
+  def update(self, delta):
+    self.time_left -= delta
+    self.time_left = max(0, self.time_left)
+    if self.time_left == 0:
+      self.level.game.register_event(RestartLevelEvent(self.level))
+      return True
+    return False
+
+def load_level(number, game):
   level_file = open(os.path.join(constants.DATA_DIR, "level%d.dat" % (number)), "r")
 
   # read from level file, allowing comments starting with '#' and blank lines,
@@ -72,10 +101,12 @@ def load_level(number):
   # by another tile or not)
   board.fix_accessibility()
 
-  return Level(player_start_x, player_start_y, board, enemies)
+  return Level(game, player_start_x, player_start_y, board, enemies)
 
 class Level:
-  def __init__(self, player_start_x, player_start_y, board, enemies):
+  def __init__(self, game, player_start_x, player_start_y, board, enemies):
+    self.game = game
+
     self.player_start = Point(player_start_x, player_start_y)
     self.board = board
 
@@ -112,19 +143,36 @@ class Level:
     self.bullets = pygame.sprite.RenderPlain()
     self.shockwaves = pygame.sprite.RenderPlain()
     self.explosions = pygame.sprite.RenderPlain()
+    self.old_status = LEVEL_ONGOING
+    self.text = None
 
-  def update_controls(self, events, pressed, mouse):
-    self.events = events
-    self.pressed = pressed
-    self.mouse = mouse
+    self.timers = []
 
-  def update(self, delta):
+    self.paused = False
+  
+  def get_status(self):
+    if not self.enemies:
+      return LEVEL_BEATEN
+    if self.player.dead:
+      return LEVEL_LOST
+    return LEVEL_ONGOING
+
+  def update(self, delta, events, pressed, mouse):
+    for event in events:
+      if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+        self.paused = not self.paused
+    
+    # if paused, don't update this frame
+    if self.paused:
+      return
+
     fire = False
-    for event in self.events:
+    for event in events:
       if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
         fire = True
+      elif event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+        self.paused = not self.paused
 
-    pressed = self.pressed
     if not self.player.dead:
       if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
         self.player.turn_left(delta)
@@ -168,7 +216,7 @@ class Level:
 
     # turret control
     # mouse position
-    m_p = self.mouse
+    m_p = mouse
     if not self.player.dead:
       self.turret.turn(delta, Point(float(m_p[0]) / constants.TILE_SIZE, float(m_p[1]) / constants.TILE_SIZE))
 
@@ -268,6 +316,23 @@ class Level:
             self.shockwaves.add(Shockwave(position.x, position.y))
       if bullet.dead: continue
 
+    status = self.get_status()
+    if not status == self.old_status and self.old_status == LEVEL_ONGOING:
+      self.old_status = status
+      if status == LEVEL_LOST:
+        self.text = pygame.font.Font(None, 36).render("You lost... :(", 1, (200, 200, 200))
+        self.timers.append(TimedLevelRestart(2000, self))
+      if status == LEVEL_BEATEN:
+        self.text = pygame.font.Font(None, 36).render("You won!", 1, (200, 200, 200))
+        self.timers.append(TimedLevelAdvance(2000, self))
+
+    to_remove = []
+    for timer in self.timers:
+      if timer.update(delta):
+        to_remove.append(timer)
+    for timer in to_remove:
+      self.timers.remove(timer)
+
   def draw(self, screen):
     self.non_solid.draw(screen)
     self.tanks.draw(screen)
@@ -278,3 +343,7 @@ class Level:
     self.explosions.draw(screen)
     self.solid.draw(screen)
     self.bullets.draw(screen)
+    if self.text is not None:
+      text_pos = self.text.get_rect(centerx = constants.RESOLUTION_X / 2)
+      text_pos.top = 300
+      screen.blit(self.text, text_pos)
