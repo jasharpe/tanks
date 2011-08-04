@@ -1,3 +1,13 @@
+class ResumeEvent:
+  def __init__(self):
+    pass
+
+  def set_game(self, game):
+    self.game = game
+
+  def do(self):
+    self.game.resume()
+
 class NewGameEvent:
   def __init__(self):
     pass

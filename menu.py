@@ -1,6 +1,6 @@
 import pygame
 import constants
-from game_event import NewGameEvent, QuitEvent
+from game_event import NewGameEvent, QuitEvent, ResumeEvent
 
 class MenuItem:
   def __init__(self, text, on_activate):
@@ -19,6 +19,9 @@ class MenuItem:
     self.selected = not self.selected
     self.generate_image()
 
+def resume_menu_action(game):
+  game.register_event(ResumeEvent())
+
 def new_game_menu_action(game):
   game.register_event(NewGameEvent())
 
@@ -26,12 +29,13 @@ def quit_menu_action(game):
   game.register_event(QuitEvent())
 
 class Menu:
-  def __init__(self, game):
+  def __init__(self, game, level):
     self.game = game
-    self.menu_items = [
-        MenuItem("New Game", new_game_menu_action),
-        MenuItem("Quit", quit_menu_action)
-    ]
+    self.menu_items = []
+    if level is not None:
+      self.menu_items.append(MenuItem("Resume", resume_menu_action))
+    self.menu_items.append(MenuItem("New Game", new_game_menu_action))
+    self.menu_items.append(MenuItem("Quit", quit_menu_action))
     self.menu_items[0].toggle_selected()
     self.selected = 0
 
@@ -54,5 +58,5 @@ class Menu:
     for menu_item in self.menu_items:
       text_pos = menu_item.text.get_rect(centerx = constants.RESOLUTION_X / 2)
       text_pos.top = text_top
-      text_top += menu_item.text.get_height()
+      text_top += menu_item.text.get_height() + 5
       screen.blit(menu_item.text, text_pos)

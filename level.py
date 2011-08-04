@@ -170,8 +170,6 @@ class Level:
     for event in events:
       if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
         fire = True
-      elif event.type == pygame.KEYDOWN and event.key == pygame.K_p:
-        self.paused = not self.paused
 
     if not self.player.dead:
       if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:

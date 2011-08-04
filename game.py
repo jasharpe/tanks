@@ -21,7 +21,7 @@ class Game:
     self.current_level = 1
     #self.level = load_level(self.current_level, self)
     self.level = None
-    self.menu = Menu(self)
+    self.menu = Menu(self, None)
     self.events = []
     self.should_quit = False
 
@@ -31,6 +31,9 @@ class Game:
   def register_event(self, event):
     event.set_game(self)
     self.events.append(event)
+
+  def resume(self):
+    self.stage = STAGE_LEVEL
 
   def start_new_game(self):
     self.current_level = 1
@@ -63,7 +66,7 @@ class Game:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
           self.level = load_level(self.current_level, self)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-          self.menu = Menu(self)
+          self.menu = Menu(self, self.level)
           self.stage = STAGE_MENU
 
     if self.stage is STAGE_LEVEL:
