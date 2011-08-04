@@ -7,23 +7,25 @@ from bullet import BOUNCED, EXPLODED
 from explosion import Shockwave, Explosion
 from level import Level, load_level
 from menu import Menu
+from victory import VictoryScreen
 
 FRAME_MS = 16
 MAX_SKIPPED_DRAWS = 5
 
 STAGE_LEVEL = 1
 STAGE_MENU = 2
+STAGE_VICTORY = 3
 MAX_LEVEL = 1
 
 class Game:
   def __init__(self):
     self.stage = STAGE_MENU
     self.current_level = 1
-    #self.level = load_level(self.current_level, self)
     self.level = None
     self.menu = Menu(self, None)
     self.events = []
     self.should_quit = False
+    self.victory = None
 
   # register an action to be executed before the next
   # update cycle. Do this in order to prevent changing
@@ -46,14 +48,22 @@ class Game:
   def advance_level(self):
     self.current_level += 1
     if self.current_level > MAX_LEVEL:
-      # TODO: do something intelligent here, cause this crashes
-      pass
-    self.restart_level()
+      self.level = None
+      self.victory = VictoryScreen()
+      self.stage = STAGE_VICTORY
+    else:
+      self.restart_level()
 
   def restart_level(self):
     self.level = load_level(self.current_level, self)
 
+  def enter_menu(self):
+    self.menu = Menu(self, self.level)
+    self.stage = STAGE_MENU
+
   def update(self, delta, pygame_events, pressed, mouse):
+    old_stage = self.stage
+
     for event in self.events:
       event.do()
     self.events = []
@@ -66,13 +76,22 @@ class Game:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
           self.level = load_level(self.current_level, self)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-          self.menu = Menu(self, self.level)
-          self.stage = STAGE_MENU
+          self.enter_menu()
+      elif self.stage is STAGE_VICTORY:
+        if event.type == pygame.KEYDOWN:
+          self.enter_menu()
 
-    if self.stage is STAGE_LEVEL:
-      self.level.update(delta, pygame_events, pressed, mouse)
-    elif self.stage is STAGE_MENU:
-      self.menu.update(delta, pygame_events, pressed, mouse)
+    # do this check so we don't accidentally update with
+    # unintentional input.
+    # this kind of sucks, maybe there's a purpose to
+    # update_controls() methods after all?
+    if old_stage is self.stage:
+      if self.stage is STAGE_LEVEL:
+        self.level.update(delta, pygame_events, pressed, mouse)
+      elif self.stage is STAGE_MENU:
+        self.menu.update(delta, pygame_events, pressed, mouse)
+      elif self.stage is STAGE_VICTORY:
+        self.victory.update(delta, pygame_events, pressed, mouse)
 
     return False
 
@@ -81,6 +100,8 @@ class Game:
       self.level.draw(screen)
     elif self.stage is STAGE_MENU:
       self.menu.draw(screen)
+    elif self.stage is STAGE_VICTORY:
+      self.victory.draw(screen)
 
 def main():
   pygame.mixer.pre_init(frequency=22050, size=-16, channels=8, buffer=512)
