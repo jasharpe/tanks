@@ -33,16 +33,19 @@ class Tank(pygame.sprite.Sprite):
     self.health = constants.TANK_HEALTH
     self.dead = False
 
+  def update_image(self):
+    self.original = pygame.Surface([constants.TILE_SIZE * constants.TANK_SIZE_RATIO, constants.TILE_SIZE * constants.TANK_SIZE_RATIO], flags=pygame.SRCALPHA)
+    diff = 20 * (constants.TANK_HEALTH - self.health)
+    new_color = pygame.Color(max(0, self.color.r - diff), max(0, self.color.g - diff), max(0, self.color.b - diff))
+    self.original.fill(new_color)
+
   def hurt(self):
     self.health -= 1
     if self.health == 0:
       self.dead = True
       return TANK_EXPLODED
     else:
-      self.original = pygame.Surface([constants.TILE_SIZE * constants.TANK_SIZE_RATIO, constants.TILE_SIZE * constants.TANK_SIZE_RATIO], flags=pygame.SRCALPHA)
-      diff = 20 * (constants.TANK_HEALTH - self.health)
-      new_color = pygame.Color(max(0, self.color.r - diff), max(0, self.color.g - diff), max(0, self.color.b - diff))
-      self.original.fill(new_color)
+      self.update_image()
       self.update_graphics()
 
   # this returns the tank to its position before the last update()
@@ -58,6 +61,8 @@ class Tank(pygame.sprite.Sprite):
     self.cooldown = max(self.cooldown, 0)
     self.old_position = self.position
     self.position = self.position.translate(((delta / 1000.0) * self.speed) * Vector(math.cos(self.direction), math.sin(self.direction)).normalize())
+    #if self.position.y < 4:
+    #  print self.position
     self.update_graphics()
 
   def update_graphics(self):
@@ -128,6 +133,37 @@ class Tank(pygame.sprite.Sprite):
     
     return False
 
+  def push_out(self, delta, side, tile_side, p):
+    def cross(A, B, C):
+      AB = B - A
+      AC = C - A
+      return AB.x * AC.y - AB.y * AC.x
+
+    tile_normal = tile_side.normal()
+    cont = False
+    for point in [side.p1, side.p2]:
+      p2 = point.translate(tile_normal)
+      i = Line(point, p2).intersect(tile_side)
+      if (point - i).length() < 0.06:
+        cont = True
+        break
+    if not cont:
+      return
+    
+    side1 = side
+    side2 = tile_side
+
+    adjustments = []
+    normal = side2.normal()
+    for point in [side1.p1, side1.p2]:
+      p2 = point.translate(normal)      
+      line = Line(point, p2)
+      i = side2.intersect(line)
+      if (point - p).dot(normal) < 0:
+        adjustments.append((i - point).length())
+    adjustment = max(adjustments) * 1.00001
+    self.position = self.position.translate(adjustment * normal)
+
   def collides_with_tile(self, tiles):
     for tile in tiles:
       # if the rects don't even collide, then they don't collide
@@ -142,10 +178,14 @@ class Tank(pygame.sprite.Sprite):
           if not p is None:
             intersects.append((side, tile_side, p))
 
-      if intersects:
-        return True
+      #print "INTERSECTS:"
+      #for intersect in intersects:
+      #  print intersect
 
-    return False
+      if intersects:
+        return intersects
+
+    return []
 
 class Turret(pygame.sprite.Sprite):
   def __init__(self, tank):

@@ -1,9 +1,17 @@
 import math, operator
 
 class Vector:
-  def __init__(self, x, y):
-    self.x = x
-    self.y = y
+  def __init__(self, x_or_a, y_or_none=None):
+    if y_or_none is None:
+      # treat x as an angle instead
+      x = math.cos(x_or_a)
+      y = math.sin(x_or_a)
+      length = math.sqrt(x * x + y * y)
+      self.x = x / length
+      self.y = y / length
+    else:
+      self.x = x_or_a
+      self.y = y_or_none
 
   def __repr__(self):
     return "Vector(%f, %f)" % (self.x, self.y)
@@ -30,7 +38,7 @@ class Vector:
     return math.atan2(self.y, self.x)
 
   def normalize(self):
-    length = math.sqrt(self.x * self.x + self.y * self.y)
+    length = self.length()
     if length == 0:
       raise Exception("Attempted to normalize zero vector")
       return Vector(0, 0)

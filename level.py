@@ -186,6 +186,17 @@ class Level:
       self.tanks.update(delta)
       if self.player.collides_with_tile(self.solid):
         self.player.revert()
+      # this is fancy and kind of nice, but hard! and looks jittery
+      #intersects = self.player.collides_with_tile(self.solid)
+      #if intersects:
+      #  for (side, tile_side, p) in intersects:
+      #    self.player.push_out(delta, side, tile_side, p)
+      #    if not self.player.collides_with_tile(self.solid):
+      #      break
+      #  if self.player.collides_with_tile(self.solid):
+      #    self.player.revert()
+      #  else:
+      #    self.player.speed = min(0.2, self.player.speed)
 
     # AI control of enemy tanks
     self.enemy_ai = filter(lambda x: x.tank in self.enemies, self.enemy_ai)
@@ -241,7 +252,6 @@ class Level:
 
     # do bullet collision detection
     # bounce off walls once, then explode on second contact
-    
     for bullet in self.bullets:
       # check for bullet/tank collisions
       if bullet.dead: continue
@@ -318,8 +328,8 @@ class Level:
     if not status == self.old_status and self.old_status == LEVEL_ONGOING:
       self.old_status = status
       if status == LEVEL_LOST:
-        self.text = pygame.font.Font(None, 36).render("You lost... :(", 1, (200, 200, 200))
-        self.timers.append(TimedLevelRestart(2000, self))
+        self.text = pygame.font.Font(None, 36).render("You lost... Press 'R' to restart", 1, (200, 200, 200))
+        #self.timers.append(TimedLevelRestart(2000, self))
       if status == LEVEL_BEATEN:
         self.text = pygame.font.Font(None, 36).render("You won!", 1, (200, 200, 200))
         self.timers.append(TimedLevelAdvance(2000, self))

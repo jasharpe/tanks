@@ -79,7 +79,8 @@ class Game:
           self.enter_menu()
       elif self.stage is STAGE_VICTORY:
         if event.type == pygame.KEYDOWN:
-          self.enter_menu()
+          if self.victory.cooldown == 0:
+            self.enter_menu()
 
     # do this check so we don't accidentally update with
     # unintentional input.

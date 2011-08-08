@@ -8,6 +8,9 @@ VERTICAL_TILES = 16
 RESOLUTION_X = TILE_SIZE * HORIZONTAL_TILES
 RESOLUTION_Y = TILE_SIZE * VERTICAL_TILES
 
+# the time in milliseconds before a screen responds to input
+SCREEN_CHANGE_COOLDOWN = 1000
+
 # Bullet
 # speed in tiles per second
 BULLET_SPEED = 5.0
