@@ -12,6 +12,7 @@ from game_event import RestartLevelEvent, AdvanceLevelEvent
 from powerup import Powerup
 from collision import *
 from particle import *
+import utils
 
 LEVEL_ONGOING = 1
 LEVEL_BEATEN = 2
@@ -116,7 +117,8 @@ class Level:
     self.powerups = pygame.sprite.RenderPlain()
     self.powerups.add(Powerup(2, 1))
 
-    self.particles = pygame.sprite.RenderPlain()
+    self.powerup_particles = pygame.sprite.RenderPlain()
+    self.trail_particles = pygame.sprite.RenderPlain()
 
     self.tanks = pygame.sprite.RenderPlain()
     self.turrets = pygame.sprite.RenderPlain()
@@ -250,11 +252,17 @@ class Level:
     self.shockwaves.update(delta)
     self.explosions.update(delta)
     self.powerups.update(delta)
-    self.particles.update(delta)
+    self.powerup_particles.update(delta)
+    self.trail_particles.update(delta)
 
-    for particle in self.particles:
-      if particle.age >= constants.POWERUP_PARTICLE_AGE:
-        particle.remove(self.particles)
+    for particle in self.powerup_particles:
+      if particle.age >= particle.max_age:
+        particle.remove(self.powerup_particles)
+
+    for particle in self.trail_particles:
+      if particle.age >= particle.max_age:
+        particle.remove(self.trail_particles)
+
 
     for shockwave in self.shockwaves:
       if shockwave.age > constants.SHOCKWAVE_DURATION:
@@ -342,16 +350,26 @@ class Level:
     for powerup in self.powerups:
       if not powerup.taken:
         if tank_collides_with_powerup(self.player, powerup):
+          play_sound("pickup")
           powerup.take(self.player)
 
       if powerup.done:
+        play_sound("powerup")
         self.powerups.remove(powerup)
         for i in xrange(0, constants.POWERUP_PARTICLES):
           angle = i * 2 * math.pi / constants.POWERUP_PARTICLES
+          #angle += utils.random_between(-math.pi / 4, math.pi / 4)
           d = Vector(angle)
           p = powerup.position
           c = powerup.colour_time
-          self.particles.add(PowerupParticle(p, d, c))
+          particle = PowerupParticle(p, d, c)
+          self.powerup_particles.add(particle)
+
+    # add trail particles
+    for particle in self.powerup_particles:
+      while particle.trail_counter > constants.TRAIL_FREQUENCY:
+        self.trail_particles.add(TrailParticle(particle.actual_position, particle.get_colour()))
+        particle.trail_counter -= constants.TRAIL_FREQUENCY
 
     status = self.get_status()
     if not status == self.old_status and self.old_status == LEVEL_ONGOING:
@@ -381,7 +399,8 @@ class Level:
     self.solid.draw(screen)
     self.bullets.draw(screen)
     self.powerups.draw(screen)
-    self.particles.draw(screen)
+    self.powerup_particles.draw(screen)
+    self.trail_particles.draw(screen)
     if self.text is not None:
       text_pos = self.text.get_rect(centerx = constants.RESOLUTION_X / 2)
       text_pos.top = 300
