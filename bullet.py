@@ -37,33 +37,11 @@ class Bullet(pygame.sprite.Sprite):
   def has_bounces(self):
     return self.bounces < 1
 
+  def has_bounced(self):
+    return self.bounces > 0
+
   def reset_vec(self):
     self.vec = Vector(math.cos(self.direction), math.sin(self.direction)).normalize()
-
-  def collides_with_bullet(self, bullet):
-    return pygame.sprite.collide_rect(self, bullet)
-
-  def collides_with_tank(self, tank):
-    pos = (self.position.x, self.position.y)
-
-    # if this is the owner and we haven't yet travelled past the
-    # end of the tank, this can't be a hit!
-    if tank is self.owner and self.total_distance < constants.TANK_SIZE_RATIO / 2:
-      return False
-
-    # if the bullet is not in the tank's rect, then a collision
-    # could not have occurred.    
-    if not tank.rect.collidepoint((pos[0] * constants.TILE_SIZE, pos[1] * constants.TILE_SIZE)):
-      return False
-
-    # now check the pixel of the tank's image where the bullet is.
-    # if it's not transparent it's a collision.
-    pixel = (
-        max(0, min(tank.rect.width - 1, int(round(pos[0] * constants.TILE_SIZE - tank.rect.x)))),
-        max(0, min(tank.rect.height - 1, int(round(pos[1] * constants.TILE_SIZE - tank.rect.y))))
-    )
-    color = tank.image.get_at(pixel)
-    return color[3] != 0
 
   # bounce off wall (which is a line segment).
   # traces movement of bullet backwards 

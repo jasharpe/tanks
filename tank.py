@@ -40,6 +40,9 @@ class Tank(pygame.sprite.Sprite):
     self.original.fill(new_color)
 
   def hurt(self):
+    if constants.INFINITE_HEALTH:
+      return
+
     self.health -= 1
     if self.health == 0:
       self.dead = True
@@ -61,14 +64,11 @@ class Tank(pygame.sprite.Sprite):
     self.cooldown = max(self.cooldown, 0)
     self.old_position = self.position
     self.position = self.position.translate(((delta / 1000.0) * self.speed) * Vector(math.cos(self.direction), math.sin(self.direction)).normalize())
-    #if self.position.y < 4:
-    #  print self.position
     self.update_graphics()
 
   def update_graphics(self):
     self.image = pygame.transform.rotate(self.original, -self.direction * 180.0 / math.pi)
-    self.rect = self.image.get_rect(center=(constants.TILE_SIZE * self.position.x, constants.TILE_SIZE * self.position.y))
-    #self.rect.center = (self.position.x, self.position.y)
+    self.rect = self.image.get_rect(center=(self.position.scale(constants.TILE_SIZE)))
   
   def accelerate(self, delta):
     self.speed += constants.ACCEL_SPEED * (delta / 1000.0)
@@ -118,21 +118,8 @@ class Tank(pygame.sprite.Sprite):
     left = Line(back_left, front_left)
     right = Line(back_right, front_right)
     return [front, back, left, right]
-    
-  def collides_with_tank(self, tank):
-    if not pygame.sprite.collide_rect(self, tank):
-      return False
 
-    this_sides = self.get_sides()
-    other_sides = tank.get_sides()
-    for side in this_sides:
-      for other_side in other_sides:
-        p = side.intersect_segments(other_side)
-        if p is not None:
-          return True
-    
-    return False
-
+  # not currently used
   def push_out(self, delta, side, tile_side, p):
     def cross(A, B, C):
       AB = B - A
@@ -163,29 +150,6 @@ class Tank(pygame.sprite.Sprite):
         adjustments.append((i - point).length())
     adjustment = max(adjustments) * 1.00001
     self.position = self.position.translate(adjustment * normal)
-
-  def collides_with_tile(self, tiles):
-    for tile in tiles:
-      # if the rects don't even collide, then they don't collide
-      if not pygame.sprite.collide_rect(self, tile):
-        continue
-      
-      # otherwise, have to verify collision in case of turned tank
-      intersects = []
-      for side in self.get_sides():
-        for tile_side in tile.get_sides():
-          p = side.intersect_segments(tile_side)
-          if not p is None:
-            intersects.append((side, tile_side, p))
-
-      #print "INTERSECTS:"
-      #for intersect in intersects:
-      #  print intersect
-
-      if intersects:
-        return intersects
-
-    return []
 
 class Turret(pygame.sprite.Sprite):
   def __init__(self, tank):

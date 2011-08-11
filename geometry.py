@@ -55,8 +55,18 @@ class Point:
     self.x = x
     self.y = y
 
-  def as_tuple(self):
-    return (self.x, self.y)
+  def __len__(self):
+    return 2
+
+  def __getitem__(self, key):
+    if type(key) is int:
+      if key == 0:
+        return self.x
+      elif key == 1:
+        return self.y
+      else:
+        raise IndexError("key is not 0 or 1")
+    raise TypeError("key is not int")
 
   def __repr__(self):
     return "Point(%f, %f)" % (self.x, self.y)
@@ -66,6 +76,9 @@ class Point:
 
   def translate(self, v):
     return Point(self.x + v.x, self.y + v.y)
+
+  def scale(self, s):
+    return Point(self.x * s, self.y * s)
 
   # returns this point, rotated a radians about the origin
   def rotate(self, a):

@@ -9,6 +9,9 @@ from bullet import BOUNCED, EXPLODED
 from explosion import Explosion, Shockwave
 from sound import play_sound
 from game_event import RestartLevelEvent, AdvanceLevelEvent
+from powerup import Powerup
+from collision import *
+from particle import *
 
 LEVEL_ONGOING = 1
 LEVEL_BEATEN = 2
@@ -110,6 +113,11 @@ class Level:
     self.player_start = Point(player_start_x, player_start_y)
     self.board = board
 
+    self.powerups = pygame.sprite.RenderPlain()
+    self.powerups.add(Powerup(2, 1))
+
+    self.particles = pygame.sprite.RenderPlain()
+
     self.tanks = pygame.sprite.RenderPlain()
     self.turrets = pygame.sprite.RenderPlain()
 
@@ -184,7 +192,7 @@ class Level:
         self.player.neutral(delta)
 
       self.tanks.update(delta)
-      if self.player.collides_with_tile(self.solid):
+      if tank_collides_with_tile(self.player, self.solid):
         self.player.revert()
       # this is fancy and kind of nice, but hard! and looks jittery
       #intersects = self.player.collides_with_tile(self.solid)
@@ -206,12 +214,12 @@ class Level:
     # update enemies
     self.enemies.update(delta)
     for enemy in self.enemies:
-      if enemy.collides_with_tile(self.solid):
+      if tank_collides_with_tile(enemy, self.solid):
         enemy.revert()
 
     # check for tank to tank collisions
     for enemy in self.enemies:
-      if not self.player.dead and enemy.collides_with_tank(self.player):
+      if not self.player.dead and tank_collides_with_tank(enemy, self.player):
         self.player.revert()
         enemy.revert()
 
@@ -241,6 +249,12 @@ class Level:
     self.bullets.update(delta)
     self.shockwaves.update(delta)
     self.explosions.update(delta)
+    self.powerups.update(delta)
+    self.particles.update(delta)
+
+    for particle in self.particles:
+      if particle.age >= constants.POWERUP_PARTICLE_AGE:
+        particle.remove(self.particles)
 
     for shockwave in self.shockwaves:
       if shockwave.age > constants.SHOCKWAVE_DURATION:
@@ -256,7 +270,7 @@ class Level:
       # check for bullet/tank collisions
       if bullet.dead: continue
 
-      if not self.player.dead and bullet.collides_with_tank(self.player):
+      if not self.player.dead and bullet_collides_with_tank(bullet, self.player):
         # do something to the player
         result = self.player.hurt()
         if result is TANK_EXPLODED:
@@ -274,7 +288,7 @@ class Level:
       if bullet.dead: continue
 
       for enemy in self.enemies:
-        if bullet.collides_with_tank(enemy):
+        if bullet_collides_with_tank(bullet, enemy):
           # damage the enemy
           result = enemy.hurt()
           if result is TANK_EXPLODED:
@@ -294,7 +308,7 @@ class Level:
 
       # check for bullet/bullet collisions
       for bullet2 in filter(lambda x: x is not bullet, self.bullets):
-        if bullet.collides_with_bullet(bullet2):
+        if bullet_collides_with_bullet(bullet, bullet2):
           play_sound("bullet_explode")
           self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
           bullet.remove(self.bullets)
@@ -324,6 +338,21 @@ class Level:
             self.shockwaves.add(Shockwave(position.x, position.y))
       if bullet.dead: continue
 
+    # apply powerups
+    for powerup in self.powerups:
+      if not powerup.taken:
+        if tank_collides_with_powerup(self.player, powerup):
+          powerup.take(self.player)
+
+      if powerup.done:
+        self.powerups.remove(powerup)
+        for i in xrange(0, constants.POWERUP_PARTICLES):
+          angle = i * 2 * math.pi / constants.POWERUP_PARTICLES
+          d = Vector(angle)
+          p = powerup.position
+          c = powerup.colour_time
+          self.particles.add(PowerupParticle(p, d, c))
+
     status = self.get_status()
     if not status == self.old_status and self.old_status == LEVEL_ONGOING:
       self.old_status = status
@@ -351,6 +380,8 @@ class Level:
     self.explosions.draw(screen)
     self.solid.draw(screen)
     self.bullets.draw(screen)
+    self.powerups.draw(screen)
+    self.particles.draw(screen)
     if self.text is not None:
       text_pos = self.text.get_rect(centerx = constants.RESOLUTION_X / 2)
       text_pos.top = 300
