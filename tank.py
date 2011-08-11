@@ -15,7 +15,7 @@ class Tank(pygame.sprite.Sprite):
     self.original.fill(color)
     self.image = self.original
     self.rect = self.image.get_rect()
-    
+
     # current coordinates of the centre of the tank
     # starts at + 0.5 so that it is in the middle of its start tile
     self.position = Point(x + 0.5, y + 0.5)

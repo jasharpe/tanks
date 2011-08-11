@@ -106,6 +106,7 @@ class Line:
   def as_vector(self):
     return self.p2 - self.p1
 
+  # Returns the length of the line segment
   def length(self):
     return (self.p2 - self.p1).length()
 

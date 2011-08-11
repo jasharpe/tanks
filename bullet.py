@@ -13,6 +13,7 @@ class Bullet(pygame.sprite.Sprite):
     super(Bullet, self).__init__()
     
     self.original = pygame.Surface([constants.TILE_SIZE * constants.BULLET_WIDTH_RATIO, constants.TILE_SIZE * constants.BULLET_HEIGHT_RATIO], flags=pygame.SRCALPHA)
+
     self.original.fill(constants.BULLET_COLOR)
     self.image = self.original
     self.rect = self.image.get_rect()

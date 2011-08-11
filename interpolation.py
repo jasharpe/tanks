@@ -1,0 +1,26 @@
+import pygame
+
+def linear(val, max, min=0):
+  return (val - min) / float(max - min)
+
+# returns a bidirectional linear interpolation. 
+def linear_bi(val, max, min=0):
+  t = linear(val, max, min)
+  return 1 - 2 * abs(t - 0.5)
+
+def ease(t, easing_function):
+  return (1 - t) * easing_function(t) + t * (-easing_function(1 - t) + 1)
+
+def quadratic(val, max, min=0):
+  return ease(linear(val, max, min), lambda x: x ** 1.5)
+
+def quadratic_bi(val, max, min=0):
+  return ease(linear_bi(val, max, min), lambda x: x ** 1.5)
+
+def interpolate_colours(t, c1, c2):
+  return pygame.Color(
+      int(round(c1.r * t + c2.r * (1 - t))),
+      int(round(c1.g * t + c2.g * (1 - t))),
+      int(round(c1.b * t + c2.b * (1 - t))),
+      int(round(c1.a * t + c2.a * (1 - t)))
+  )
