@@ -20,7 +20,7 @@ MAX_LEVEL = 1
 
 class Game:
   def __init__(self):
-    play_music("Move_Move_Move.mp3", 0.5)
+    play_music("movemovemove.ogg", 0.5)
     self.stage = STAGE_MENU
     self.current_level = 1
     self.level = None
