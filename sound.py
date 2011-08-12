@@ -2,6 +2,22 @@ import pygame, os, constants
 
 sounds = {}
 
+def play_music(name, volume=1.0):
+  fullname = os.path.join(constants.DATA_DIR, name)
+  pygame.mixer.music.load(fullname)
+  pygame.mixer.music.set_volume(volume)
+  pygame.mixer.music.play(-1)
+
+def pause_music():
+  if pygame.mixer.music.get_busy():
+    pygame.mixer.music.pause()
+
+def unpause_music():
+  pygame.mixer.music.unpause()
+
+def stop_music():
+  pygame.mixer.music.stop()
+
 def play_sound(name, volume=1.0):
   global sounds
   if not name in sounds:

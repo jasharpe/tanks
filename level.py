@@ -115,7 +115,7 @@ class Level:
     self.board = board
 
     self.powerups = pygame.sprite.RenderPlain()
-    self.powerups.add(Powerup(2, 1))
+    self.powerups.add(Powerup(5, 5))
 
     self.powerup_particles = pygame.sprite.RenderPlain()
     self.trail_particles = pygame.sprite.RenderPlain()
@@ -350,11 +350,11 @@ class Level:
     for powerup in self.powerups:
       if not powerup.taken:
         if tank_collides_with_powerup(self.player, powerup):
-          play_sound("pickup")
+          play_sound("pickup", 0.2)
           powerup.take(self.player)
 
       if powerup.done:
-        play_sound("powerup")
+        play_sound("powerup", 0.2)
         self.powerups.remove(powerup)
         for i in xrange(0, constants.POWERUP_PARTICLES):
           angle = i * 2 * math.pi / constants.POWERUP_PARTICLES

@@ -8,6 +8,7 @@ from explosion import Shockwave, Explosion
 from level import Level, load_level
 from menu import Menu
 from victory import VictoryScreen
+from sound import *
 
 FRAME_MS = 16
 MAX_SKIPPED_DRAWS = 5
@@ -19,6 +20,7 @@ MAX_LEVEL = 1
 
 class Game:
   def __init__(self):
+    play_music("Move_Move_Move.mp3", 0.5)
     self.stage = STAGE_MENU
     self.current_level = 1
     self.level = None
@@ -105,7 +107,7 @@ class Game:
       self.victory.draw(screen)
 
 def main():
-  pygame.mixer.pre_init(frequency=22050, size=-16, channels=8, buffer=512)
+  pygame.mixer.pre_init(frequency=22050, size=-16, channels=16, buffer=512)
   pygame.init()
   screen = pygame.display.set_mode(
       [constants.RESOLUTION_X, constants.RESOLUTION_Y])

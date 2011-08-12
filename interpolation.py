@@ -12,10 +12,10 @@ def ease(t, easing_function):
   return (1 - t) * easing_function(t) + t * (-easing_function(1 - t) + 1)
 
 def quadratic(val, max, min=0):
-  return ease(linear(val, max, min), lambda x: x ** 1.5)
+  return ease(linear(val, max, min), lambda x: x ** 2)
 
 def quadratic_bi(val, max, min=0):
-  return ease(linear_bi(val, max, min), lambda x: x ** 1.5)
+  return ease(linear_bi(val, max, min), lambda x: x ** 2)
 
 def interpolate_colours(t, c1, c2):
   return pygame.Color(
