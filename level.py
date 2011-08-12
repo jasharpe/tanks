@@ -42,76 +42,12 @@ class TimedLevelRestart:
       return True
     return False
 
-def load_level(number, game):
-  level_file = open(os.path.join(constants.DATA_DIR, "level%d.dat" % (number)), "r")
-
-  # read from level file, allowing comments starting with '#' and blank lines,
-  # returning the first meaningful line, stripped of its new line character.
-  def read():
-    line = None
-    while line is None or line is "" or line.isspace() or line.startswith("#"):
-      line = level_file.readline().strip()
-    return line
-
-  # board size
-  height = int(read())
-  width = int(read())
-
-  # player start position
-  player_start_x = int(read())
-  player_start_y = int(read())
-  if not (0 <= player_start_x < width) or \
-     not (0 <= player_start_y < height):
-    raise Exception("Player start position (%d, %d) outside board." % (player_start_x, player_start_y))
-  
-  # enemies
-  num_enemies = int(read())
-  enemies = []
-  for i in xrange(0, num_enemies):
-    x = int(read())
-    y = int(read())
-    if not (0 <= x < width) or \
-       not (0 <= y < height):
-      raise Exception("Enemy start position (%d, %d) outside board." % (x, y))
-    
-    # waypoints
-    waypoints = []
-    num_waypoints = int(read())
-    waypoint_type = None
-    if num_waypoints > 0:
-      waypoint_type = read()
-    for j in xrange(0, num_waypoints):
-      w_x = int(read())
-      w_y = int(read())
-      waypoints.append(Point(w_x + 0.5, w_y + 0.5))
-
-    enemies.append((x, y, waypoints, waypoint_type))
-
-  # tiles
-  board = Board(width, height)
-  for i in range(0, height):
-    line = read()
-    for j in range(0, width):
-      tile = Tile(line[j], j, i)
-      if tile.solid:
-        if i is player_start_y and j is player_start_x:
-          raise Exception("Player start position (%d, %d) is inside a solid tile." % (player_start_x, player_start_y))
-        for (x, y, waypoints, waypoint_type) in enemies:
-          if i is y and j is x:
-            raise Exception("Enemy start position (%d, %d) is inside a solid tile." % (x, y))
-      board.set_tile(j, i, tile)
-
-  # let each tile know if its walls are accessible (i.e., if they are blocked
-  # by another tile or not)
-  board.fix_accessibility()
-
-  return Level(game, player_start_x, player_start_y, board, enemies)
-
 class Level:
-  def __init__(self, game, player_start_x, player_start_y, board, enemies):
+  def __init__(self, game, player_start, player_direction, board, enemies):
     self.game = game
 
-    self.player_start = Point(player_start_x, player_start_y)
+    self.player_start = player_start
+    self.player_direction = player_direction
     self.board = board
 
     self.powerups = pygame.sprite.RenderPlain()
@@ -123,7 +59,7 @@ class Level:
     self.tanks = pygame.sprite.RenderPlain()
     self.turrets = pygame.sprite.RenderPlain()
 
-    self.player = Tank(self.player_start.x, self.player_start.y)
+    self.player = Tank(self.player_start, self.player_direction)
     self.tanks.add(self.player)
     self.turret = Turret(self.player)
     self.turrets.add(self.turret)
@@ -132,8 +68,8 @@ class Level:
     self.enemy_turrets = pygame.sprite.RenderPlain()
     self.enemy_ai = []
     self.enemy_turret_ai = []
-    for (x, y, waypoints, waypoint_type) in enemies:
-      enemy = Tank(x, y, constants.ENEMY_TANK_COLOR)
+    for (p, d, waypoint_type, waypoints) in enemies:
+      enemy = Tank(p, d, constants.ENEMY_TANK_COLOR)
       self.enemy_ai.append(TankAI(enemy, self, waypoints, waypoint_type))
       enemy_turret = Turret(enemy)
       self.enemies.add(enemy)

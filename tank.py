@@ -6,22 +6,16 @@ from bullet import Bullet
 TANK_EXPLODED = 1
 
 class Tank(pygame.sprite.Sprite):
-  def __init__(self, x, y, color=constants.TANK_COLOR):
+  def __init__(self, position, direction, color=constants.TANK_COLOR):
     pygame.sprite.Sprite.__init__(self)
 
     self.color = color
 
-    self.original = pygame.Surface([constants.TILE_SIZE * constants.TANK_SIZE_RATIO, constants.TILE_SIZE * constants.TANK_SIZE_RATIO], flags=pygame.SRCALPHA)
-    self.original.fill(color)
-    self.image = self.original
-    self.rect = self.image.get_rect()
-
     # current coordinates of the centre of the tank
-    # starts at + 0.5 so that it is in the middle of its start tile
-    self.position = Point(x + 0.5, y + 0.5)
+    self.position = position
     self.old_position = self.position
     # current direction of the tank, in radians
-    self.direction = 0.0
+    self.direction = direction
     self.old_direction = self.direction
     # speed of the tank
     self.speed = 0.0
@@ -33,8 +27,12 @@ class Tank(pygame.sprite.Sprite):
     self.health = constants.TANK_HEALTH
     self.dead = False
 
+    self.update_image()
+    self.update_graphics()
+
   def update_image(self):
-    self.original = pygame.Surface([constants.TILE_SIZE * constants.TANK_SIZE_RATIO, constants.TILE_SIZE * constants.TANK_SIZE_RATIO], flags=pygame.SRCALPHA)
+    size = constants.TILE_SIZE * constants.TANK_SIZE_RATIO
+    self.original = pygame.Surface([size, size], flags=pygame.SRCALPHA)
     diff = 20 * (constants.TANK_HEALTH - self.health)
     new_color = pygame.Color(max(0, self.color.r - diff), max(0, self.color.g - diff), max(0, self.color.b - diff))
     self.original.fill(new_color)

@@ -5,10 +5,11 @@ from geometry import Vector, Point, Line, ORIGIN
 from tile import Tile, TILE_RIGHT, TILE_LEFT, TILE_BOTTOM, TILE_TOP
 from bullet import BOUNCED, EXPLODED
 from explosion import Shockwave, Explosion
-from level import Level, load_level
+from level import Level
 from menu import Menu
 from victory import VictoryScreen
 from sound import *
+from level_loader import load_level
 
 FRAME_MS = 16
 MAX_SKIPPED_DRAWS = 5
@@ -16,11 +17,10 @@ MAX_SKIPPED_DRAWS = 5
 STAGE_LEVEL = 1
 STAGE_MENU = 2
 STAGE_VICTORY = 3
-MAX_LEVEL = 1
 
 class Game:
   def __init__(self):
-    play_music("movemovemove.ogg", 0.5)
+    play_music("movemovemove.ogg", 0.7)
     self.stage = STAGE_MENU
     self.current_level = 1
     self.level = None
@@ -49,12 +49,12 @@ class Game:
 
   def advance_level(self):
     self.current_level += 1
-    if self.current_level > MAX_LEVEL:
+    try:
+      self.restart_level()
+    except:
       self.level = None
       self.victory = VictoryScreen()
       self.stage = STAGE_VICTORY
-    else:
-      self.restart_level()
 
   def restart_level(self):
     self.level = load_level(self.current_level, self)
