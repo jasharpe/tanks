@@ -29,7 +29,7 @@ class Powerup(pygame.sprite.Sprite):
     size = int(round(constants.TILE_SIZE * constants.POWERUP_SIZE_RATIO * t))
     self.image = pygame.Surface([size, size], flags=pygame.SRCALPHA)
     self.image.fill(pygame.Color(0, 0, 0, 0))
-    center = (self.position.scale(constants.TILE_SIZE))
+    center = self.position.scale(constants.TILE_SIZE)
     image_center = (self.image.get_width() / 2, self.image.get_height() / 2)
     r = quadratic_bi(self.colour_time, constants.POWERUP_COLOUR_MODULATION_TIME)
     c = interpolate_colours(r, constants.POWERUP_COLOR_ONE, constants.POWERUP_COLOR_TWO)

@@ -12,6 +12,7 @@ from game_event import RestartLevelEvent, AdvanceLevelEvent
 from powerup import Powerup
 from collision import *
 from particle import *
+from shield import Shield
 import utils
 
 LEVEL_ONGOING = 1
@@ -51,7 +52,9 @@ class Level:
     self.board = board
 
     self.powerups = pygame.sprite.RenderPlain()
-    self.powerups.add(Powerup(5, 5))
+    self.powerups.add(Powerup(2, 2))
+
+    self.shields = pygame.sprite.RenderPlain()
 
     self.powerup_particles = pygame.sprite.RenderPlain()
     self.trail_particles = pygame.sprite.RenderPlain()
@@ -190,6 +193,7 @@ class Level:
     self.powerups.update(delta)
     self.powerup_particles.update(delta)
     self.trail_particles.update(delta)
+    self.shields.update(delta)
 
     for particle in self.powerup_particles:
       if particle.age >= particle.max_age:
@@ -292,9 +296,9 @@ class Level:
       if powerup.done:
         play_sound("powerup", 0.2)
         self.powerups.remove(powerup)
+        self.shields.add(Shield(self.player))
         for i in xrange(0, constants.POWERUP_PARTICLES):
           angle = i * 2 * math.pi / constants.POWERUP_PARTICLES
-          #angle += utils.random_between(-math.pi / 4, math.pi / 4)
           d = Vector(angle)
           p = powerup.position
           c = powerup.colour_time
@@ -335,6 +339,7 @@ class Level:
     self.solid.draw(screen)
     self.bullets.draw(screen)
     self.powerups.draw(screen)
+    self.shields.draw(screen)
     self.powerup_particles.draw(screen)
     self.trail_particles.draw(screen)
     if self.text is not None:
