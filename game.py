@@ -1,5 +1,5 @@
 import pygame
-import constants, math
+import constants, math, sys
 from tank import Tank, Turret
 from geometry import Vector, Point, Line, ORIGIN
 from tile import Tile, TILE_RIGHT, TILE_LEFT, TILE_BOTTOM, TILE_TOP
@@ -10,6 +10,7 @@ from menu import Menu
 from victory import VictoryScreen
 from sound import *
 from level_loader import load_level
+import getopt
 
 FRAME_MS = 16
 MAX_SKIPPED_DRAWS = 5
@@ -19,12 +20,18 @@ STAGE_MENU = 2
 STAGE_VICTORY = 3
 
 class Game:
-  def __init__(self):
+  def __init__(self, starting_level=None):
     play_music("movemovemove.ogg", 0.7)
-    self.stage = STAGE_MENU
-    self.current_level = 1
-    self.level = None
-    self.menu = Menu(self, None)
+    if starting_level is not None:
+      self.current_level = starting_level
+      self.stage = STAGE_LEVEL
+      self.restart_level()
+      self.menu = None
+    else:
+      self.current_level = 1
+      self.stage = STAGE_MENU
+      self.level = None
+      self.menu = Menu(self, None)
     self.events = []
     self.should_quit = False
     self.victory = None
@@ -106,14 +113,28 @@ class Game:
     elif self.stage is STAGE_VICTORY:
       self.victory.draw(screen)
 
-def main():
+def usage():
+  print '''-l for starting level (for debug purposes)'''
+
+def main(argv):
+  try:
+    opts, args = getopt.getopt(argv[1:], "l:", ["level="])
+  except getopt.GetoptError:
+    usage()
+    return 2
+
+  starting_level = None
+  for opt, arg in opts:
+    if opt in ("-l", "--level"):
+      starting_level = int(arg)
+
   pygame.mixer.pre_init(frequency=22050, size=-16, channels=16, buffer=512)
   pygame.init()
   screen = pygame.display.set_mode(
       [constants.RESOLUTION_X, constants.RESOLUTION_Y])
   pygame.display.set_caption('Tanks!')
 
-  game = Game()
+  game = Game(starting_level)
 
   last_update_time = pygame.time.get_ticks()
   last_current_time = last_update_time
@@ -151,8 +172,8 @@ def main():
     
     last_current_time = current_time
 
-
   pygame.quit()
+  return 0
 
 if __name__ == "__main__":
-  main()
+  sys.exit(main(sys.argv))

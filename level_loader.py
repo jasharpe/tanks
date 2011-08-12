@@ -16,13 +16,16 @@ def load_level(number, game):
       line = level_file.readline().strip()
     return line
 
+  def process(line):
+    return filter(None, re.split("[(), ]", line))
+
   # board size
-  board_size = filter(None, re.split("[(), ]", read()))
+  board_size = process(read())
   width = int(board_size[0])
   height = int(board_size[1])
 
   # player start position
-  player_info = filter(None, re.split("[(), ]", read()))
+  player_info =  process(read())
   player_start = Point(int(player_info[0]) + 0.5, int(player_info[1]) + 0.5)
   if not (0 <= player_start.x < width) or \
      not (0 <= player_start.y < height):
@@ -41,20 +44,20 @@ def load_level(number, game):
     line = read()
     if line == "END ENEMIES":
       break
-    a = filter(None, re.split("[(), ]", line))
-    position = Point(int(a[0]) + 0.5, int(a[1]) + 0.5)
+    enemy_info =  process(line)
+    position = Point(int(enemy_info[0]) + 0.5, int(enemy_info[1]) + 0.5)
 
     if not (0 <= position.x < width) or \
        not (0 <= position.y < height):
       raise Exception("Enemy start position (%d, %d) outside board." % (x, y))
 
-    initial_direction = int(a[2])
+    initial_direction = int(enemy_info[2])
     if not 0 <= initial_direction < 360:
       raise Exception("Initial direction should be between 0 and 359 degrees. Was %d." % initial_direction)
-    waypoint_type = a[3]
+    waypoint_type = enemy_info[3]
     waypoints = []
-    for i in xrange(4, len(a), 2):
-      waypoints.append(Point(int(a[i]) + 0.5, int(a[i + 1]) + 0.5))
+    for i in xrange(4, len(enemy_info), 2):
+      waypoints.append(Point(int(enemy_info[i]) + 0.5, int(enemy_info[i + 1]) + 0.5))
     enemies.append((position, math.pi * initial_direction / 180.0, waypoint_type, waypoints))
 
   start_powerups = read()

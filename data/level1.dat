@@ -7,8 +7,10 @@
 # ENEMIES, each given as
 # position, initial direction in degrees, waypoint type, list of waypoints
 START ENEMIES
+(9, 5), 90, LOOP, (9, 5), (9, 10), (5, 10), (5, 5)
 (5, 5), 0, LOOP, (5, 5), (9, 5), (9, 10), (5, 10)
 (9, 10), 180, LOOP, (9, 10), (5, 10), (5, 5), (9, 5)
+(5, 10), 270, LOOP, (5, 10), (5, 5), (9, 5), (9, 10)
 END ENEMIES
 
 START POWERUPS
