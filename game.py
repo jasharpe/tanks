@@ -1,12 +1,5 @@
-import pygame
 import constants, math, sys
-from tank import Tank, Turret
-from geometry import Vector, Point, Line, ORIGIN
-from tile import Tile, TILE_RIGHT, TILE_LEFT, TILE_BOTTOM, TILE_TOP
-from bullet import BOUNCED, EXPLODED
-from explosion import Shockwave, Explosion
-from level import Level
-from menu import Menu
+from menu import MainMenu
 from victory import VictoryScreen
 from sound import *
 from level_loader import load_level
@@ -21,7 +14,9 @@ STAGE_VICTORY = 3
 
 class Game:
   def __init__(self, starting_level=None):
-    play_music("movemovemove.ogg", 0.7)
+    self.settings = constants.DEFAULT_SETTINGS
+    self.sound_manager = SoundManager(self.settings)
+    self.sound_manager.trigger_music("movemovemove.ogg", 0.7)
     if starting_level is not None:
       self.current_level = starting_level
       self.stage = STAGE_LEVEL
@@ -31,7 +26,8 @@ class Game:
       self.current_level = 1
       self.stage = STAGE_MENU
       self.level = None
-      self.menu = Menu(self, None)
+      self.menu = MainMenu(self, None)
+    self.menu_stack = []
     self.events = []
     self.should_quit = False
     self.victory = None
@@ -66,9 +62,17 @@ class Game:
   def restart_level(self):
     self.level = load_level(self.current_level, self)
 
-  def enter_menu(self):
-    self.menu = Menu(self, self.level)
-    self.stage = STAGE_MENU
+  def enter_menu(self, sub_menu=None):
+    if sub_menu is None:
+      self.menu = MainMenu(self, self.level)
+      self.menu_stack = []
+      self.stage = STAGE_MENU
+    else:
+      self.menu_stack.append(self.menu)
+      self.menu = sub_menu
+
+  def back_menu(self):
+    self.menu = self.menu_stack.pop()
 
   def update(self, delta, pygame_events, pressed, mouse):
     old_stage = self.stage

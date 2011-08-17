@@ -3,6 +3,9 @@ import pygame
 def linear(val, max, min=0):
   return (val - min) / float(max - min)
 
+def reverse_linear(t, max, min):
+  return t * (max - min) + min
+
 # returns a bidirectional linear interpolation. 
 def linear_bi(val, max, min=0):
   t = linear(val, max, min)

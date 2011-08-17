@@ -7,13 +7,11 @@ from geometry import Vector, Point, Line, ORIGIN
 from tank import Tank, Turret, TANK_EXPLODED
 from bullet import BOUNCED, EXPLODED
 from explosion import Explosion, Shockwave
-from sound import play_sound
-from game_event import RestartLevelEvent, AdvanceLevelEvent
+from game_event import RestartLevelEvent, AdvanceLevelEvent, PlaySoundEvent
 from powerup import Powerup
 from collision import *
 from particle import *
 from shield import Shield
-import utils
 
 LEVEL_ONGOING = 1
 LEVEL_BEATEN = 2
@@ -169,7 +167,7 @@ class Level:
     for turret_ai in self.enemy_turret_ai:
       bullet = turret_ai.control(delta)
       if bullet is not None:
-        play_sound("fire")
+        self.game.register_event(PlaySoundEvent(self, "fire"))
         self.bullets.add(bullet)
 
     # turret control
@@ -182,7 +180,7 @@ class Level:
       if fire:
         bullet = self.turret.fire()
         if not bullet is None:
-          play_sound("fire")
+          self.game.register_event(PlaySoundEvent(self, "fire"))
           self.bullets.add(bullet)
 
     self.enemy_turrets.update(delta)
@@ -222,12 +220,12 @@ class Level:
         # do something to the player
         result = self.player.hurt()
         if result is TANK_EXPLODED:
-          play_sound("tank_explode")
+          self.game.register_event(PlaySoundEvent(self, "tank_explode"))
           self.explosions.add(Explosion(self.player.position.x, self.player.position.y, constants.BIG_EXPLOSION_MAX_RATIO, constants.BIG_EXPLOSION_MIN_RATIO))
           self.player.remove(self.tanks)
           self.player.turret.remove(self.turrets)
         else:
-          play_sound("bullet_explode")
+          self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
 
         # explode the bullet
         self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
@@ -240,12 +238,12 @@ class Level:
           # damage the enemy
           result = enemy.hurt()
           if result is TANK_EXPLODED:
-            play_sound("tank_explode")
+            self.game.register_event(PlaySoundEvent(self, "tank_explode"))
             self.explosions.add(Explosion(enemy.position.x, enemy.position.y, constants.BIG_EXPLOSION_MAX_RATIO, constants.BIG_EXPLOSION_MIN_RATIO))
             enemy.remove(self.enemies)
             enemy.turret.remove(self.enemy_turrets)
           else:
-            play_sound("bullet_explode")
+            self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
 
           # explode the bullet
           self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
@@ -257,7 +255,7 @@ class Level:
       # check for bullet/bullet collisions
       for bullet2 in filter(lambda x: x is not bullet, self.bullets):
         if bullet_collides_with_bullet(bullet, bullet2):
-          play_sound("bullet_explode")
+          self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
           self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
           bullet.remove(self.bullets)
           bullet.die()
@@ -268,7 +266,7 @@ class Level:
 
       # check for bullets reaching max range
       if bullet.total_distance > constants.BULLET_MAX_RANGE:
-        play_sound("bullet_explode")
+        self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
         self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
         bullet.remove(self.bullets)
         bullet.die()
@@ -277,12 +275,12 @@ class Level:
         results = bullet.bounce(self.solid)
         for (result, position) in results:
           if result == EXPLODED:
-            play_sound("bullet_explode")
+            self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
             self.explosions.add(Explosion(bullet.old_position.x, bullet.old_position.y))
             bullet.remove(self.bullets)
             bullet.die()
           elif result == BOUNCED:
-            play_sound("pong", 0.35)
+            self.game.register_event(PlaySoundEvent(self, "pong", 0.35))
             self.shockwaves.add(Shockwave(position.x, position.y))
       if bullet.dead: continue
 
@@ -290,11 +288,11 @@ class Level:
     for powerup in self.powerups:
       if not powerup.taken:
         if tank_collides_with_powerup(self.player, powerup):
-          play_sound("pickup", 0.2)
+          self.game.register_event(PlaySoundEvent(self, "pickup", 0.2))
           powerup.take(self.player)
 
       if powerup.done:
-        play_sound("powerup", 0.2)
+        self.game.register_event(PlaySoundEvent(self, "powerup", 0.2))
         self.powerups.remove(powerup)
         self.shields.add(Shield(self.player))
         for i in xrange(0, constants.POWERUP_PARTICLES):

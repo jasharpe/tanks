@@ -1,5 +1,20 @@
 import pygame, os, constants
 
+class SoundManager:
+  def __init__(self, settings):
+    self.settings = settings
+
+  def trigger_music(self, name, volume=1.0):
+    if self.settings['music']:
+      play_music(name, volume)
+
+  def end_music(self):
+    stop_music()
+
+  def trigger_sound(self, name, volume=1.0):
+    if self.settings['sound']:
+      play_sound(name, volume)
+
 sounds = {}
 
 def play_music(name, volume=1.0):
