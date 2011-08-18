@@ -1,6 +1,7 @@
 import pygame
 import constants
 from game_event import *
+import re
 
 class MenuItem:
   def __init__(self, menu, text, on_activate):
@@ -22,7 +23,11 @@ class BasicItem(MenuItem):
       color = (200, 200, 200)
       if self.selected:
         color = (255, 200, 200)
-      self.image = self.menu.game.font_manager.get_font(36).render(self.raw_text, 1, color)
+      if re.match("[0-9]", self.raw_text):
+        font = self.menu.game.font_manager.get_numeral_font(36)
+      else:
+        font = self.menu.game.font_manager.get_font(36)
+      self.image = font.render(self.raw_text, 1, color)
     self.last_selected = self.selected
 
 class CheckItem(MenuItem):
@@ -69,9 +74,9 @@ class Menu:
           self.menu_items[self.selected].activate(self.game)
         elif self.game.settings['debug'] and event.key == pygame.K_n:
           if event.mod & pygame.KMOD_LSHIFT:
-            self.menu.game.font_manager.previous_font()
+            self.game.font_manager.previous_font()
           else:
-            self.menu.game.font_manager.next_font()
+            self.game.font_manager.next_font()
 
   def draw(self, screen):
     image_top = 300
@@ -95,12 +100,26 @@ class SettingsMenu(Menu):
         BasicItem(self, "Back", register_event(MenuBackEvent)),
         CheckItem(self, "Music", get_setting('music'), register_event(ToggleMusicEvent)),
         CheckItem(self, "Sound", get_setting('sound'), register_event(ToggleSoundEvent)),
-        CheckItem(self, "Debug", get_setting('debug'), register_event(ToggleDebugEvent))]
+        CheckItem(self, "Debug", get_setting('debug'), register_event(ToggleDebugEvent))
+    ]
     self.menu_items[0].toggle_selected()
     self.selected = 0
 
-def settings_menu_action(game):
-  game.register_event(EnterMenuEvent(SettingsMenu(game)))
+class LevelMenu(Menu):
+  def __init__(self, game):
+    Menu.__init__(self, game)
+    self.menu_items = [
+        BasicItem(self, "Back", register_event(MenuBackEvent))
+    ]
+    for i in xrange(1, game.max_level + 1):
+      self.menu_items.append(
+          BasicItem(self, str(i), register_event(GoToLevelEvent, i))
+      )
+    self.menu_items[0].toggle_selected()
+    self.selected = 0
+
+def enter_menu_action(menu_type):
+  return lambda game: game.register_event(EnterMenuEvent(menu_type(game)))
 
 class MainMenu(Menu):
   def __init__(self, game, level):
@@ -109,7 +128,9 @@ class MainMenu(Menu):
     if level is not None:
       self.menu_items.append(BasicItem(self, "Resume", register_event(ResumeEvent)))
     self.menu_items.append(BasicItem(self, "New Game", register_event(NewGameEvent)))
-    self.menu_items.append(BasicItem(self, "Settings", settings_menu_action))
+    if self.game.max_level > 1:
+      self.menu_items.append(BasicItem(self, "Level Select", enter_menu_action(LevelMenu)))
+    self.menu_items.append(BasicItem(self, "Settings", enter_menu_action(SettingsMenu)))
     self.menu_items.append(BasicItem(self, "Quit", register_event(QuitEvent)))
     self.menu_items[0].toggle_selected()
     self.selected = 0

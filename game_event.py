@@ -1,7 +1,4 @@
-class Event:
-  def __init__(self):
-    pass
-
+class Event(object):
   def set_game(self, game):
     self.game = game
 
@@ -9,23 +6,14 @@ class Event:
     raise Exception("Implement 'do' method.")
 
 class ResumeEvent(Event):
-  def __init__(self):
-    Event.__init__(self)
-
   def do(self):
     self.game.resume()
 
 class NewGameEvent(Event):
-  def __init__(self):
-    Event.__init__(self)
-
   def do(self):
     self.game.start_new_game()
 
 class QuitEvent(Event):
-  def __init__(self):
-    Event.__init__(self)
-
   def do(self):
     self.game.quit()
 
@@ -38,16 +26,10 @@ class EnterMenuEvent(Event):
     self.game.enter_menu(self.menu)
 
 class MenuBackEvent(Event):
-  def __init__(self):
-    Event.__init__(self)
-
   def do(self):
     self.game.back_menu()
 
 class ToggleMusicEvent(Event):
-  def __init__(self):
-    Event.__init__(self)
-
   def do(self):
     self.game.settings['music'] = not self.game.settings['music']
     if self.game.settings['music']:
@@ -56,22 +38,16 @@ class ToggleMusicEvent(Event):
       self.game.sound_manager.end_music()
 
 class ToggleSoundEvent(Event):
-  def __init__(self):
-    Event.__init__(self)
-
   def do(self):
     self.game.settings['sound'] = not self.game.settings['sound']
 
 class ToggleDebugEvent(Event):
-  def __init__(self):
-    Event.__init__(self)
-
   def do(self):
     self.game.settings['debug'] = not self.game.settings['debug']
 
 class AdvanceLevelEvent:
   def __init__(self, level):
-    self.level = level  
+    self.level = level
 
   def set_game(self, game):
     self.game = game
@@ -90,6 +66,13 @@ class RestartLevelEvent:
   def do(self):
     if self.game.level is self.level:
       self.game.restart_level()
+
+class GoToLevelEvent(Event):
+  def __init__(self, level):
+    self.level = level
+
+  def do(self):
+    self.game.go_to_level(self.level)
 
 class PlayMusicEvent:
   def __init__(self, level, name, volume=1.0):

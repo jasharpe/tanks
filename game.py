@@ -21,11 +21,13 @@ class Game:
     self.sound_manager.trigger_music("movemovemove.ogg", 0.7)
     if starting_level is not None:
       self.current_level = starting_level
+      self.max_level = self.current_level
       self.stage = STAGE_LEVEL
       self.restart_level()
       self.menu = None
     else:
       self.current_level = 1
+      self.max_level = self.current_level
       self.stage = STAGE_MENU
       self.level = None
       self.menu = MainMenu(self, None)
@@ -56,6 +58,7 @@ class Game:
     self.current_level += 1
     try:
       self.restart_level()
+      self.max_level = max(self.max_level, self.current_level)
     except:
       self.level = None
       self.victory = VictoryScreen()
@@ -63,6 +66,11 @@ class Game:
 
   def restart_level(self):
     self.level = load_level(self.current_level, self)
+
+  def go_to_level(self, level):
+    self.current_level = level
+    self.restart_level()
+    self.stage = STAGE_LEVEL
 
   def enter_menu(self, sub_menu=None):
     if sub_menu is None:
