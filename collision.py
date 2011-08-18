@@ -17,6 +17,9 @@ def tank_collides_with_tank(tank1, tank2):
 def bullet_collides_with_bullet(bullet1, bullet2):
   return pygame.sprite.collide_rect(bullet1, bullet2)
 
+def bullet_collides_with_shield(bullet, shield):
+  return sprite_collide_exact(bullet, shield)
+
 def bullet_collides_with_tank(bullet, tank):
   # if this is the owner and we haven't yet travelled past the
   # end of the tank, this can't be a hit!

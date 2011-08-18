@@ -21,13 +21,22 @@ class Shield(pygame.sprite.Sprite):
     self.pulses = set()
     self.pulses.add(Pulse())
 
+    self.active = False
+    self.dead = False
+    self.dead_time = 0
+    self.to_remove = False
+
     self.update_graphics()
+
+  def die(self):
+    self.active = False
+    self.dead = True
 
   def update_graphics(self):
     t = interpolation.quadratic_bi(self.pulse_time, constants.SHIELD_PULSE_PERIOD)
     # pulsating (breathing)
     #size = int(round(interpolation.reverse_linear(t, 1.1, 1.0) * interpolation.linear(self.growth_time, constants.SHIELD_GROWTH_TIME) * constants.TILE_SIZE * constants.SHIELD_RADIUS_RATIO * 2))
-    size = int(round(interpolation.linear(self.growth_time, constants.SHIELD_GROWTH_TIME) * constants.TILE_SIZE * constants.SHIELD_RADIUS_RATIO * 2))
+    size = int(round((1 - interpolation.linear(self.dead_time, constants.SHIELD_DEATH_TIME)) * interpolation.linear(self.growth_time, constants.SHIELD_GROWTH_TIME) * constants.TILE_SIZE * constants.SHIELD_RADIUS_RATIO * 2))
     self.image = pygame.Surface([size, size], flags=pygame.SRCALPHA)
     self.image.fill(pygame.Color(0, 0, 0, 0))
     image_center = (self.image.get_width() / 2, self.image.get_height() / 2)
@@ -50,4 +59,10 @@ class Shield(pygame.sprite.Sprite):
       self.pulsed = True
       self.pulse_time %= constants.SHIELD_PULSE_PERIOD
     self.growth_time = min(self.growth_time + delta, constants.SHIELD_GROWTH_TIME)
+    if self.growth_time is constants.SHIELD_GROWTH_TIME:
+      self.active = True
+    if self.dead:
+      self.dead_time = min(self.dead_time + delta, constants.SHIELD_DEATH_TIME)
+      if self.dead_time is constants.SHIELD_DEATH_TIME:
+        self.to_remove = True
     self.update_graphics()

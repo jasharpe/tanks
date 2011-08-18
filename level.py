@@ -201,6 +201,10 @@ class Level:
       if particle.age >= particle.max_age:
         particle.remove(self.trail_particles)
 
+    for shield in self.shields:
+      if shield.to_remove:
+        shield.remove(self.shields)
+
 
     for shockwave in self.shockwaves:
       if shockwave.age > constants.SHOCKWAVE_DURATION:
@@ -214,6 +218,19 @@ class Level:
     # bounce off walls once, then explode on second contact
     for bullet in self.bullets:
       # check for bullet/tank collisions
+      if bullet.dead: continue
+
+      for shield in self.shields:
+        if shield.active and bullet_collides_with_shield(bullet, shield):
+          # destroy the shield
+          self.game.register_event(PlaySoundEvent(self, "shield_die"))
+          shield.die()
+          
+          # explode the bullet
+          self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
+          self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
+          bullet.remove(self.bullets)
+          bullet.die()
       if bullet.dead: continue
 
       if not self.player.dead and bullet_collides_with_tank(bullet, self.player):

@@ -1,7 +1,7 @@
-import constants, math, sys
+import pygame, constants, math, sys
 from menu import MainMenu
 from victory import VictoryScreen
-from sound import *
+from sound import SoundManager
 from level_loader import load_level
 import getopt
 from font import FontManager
