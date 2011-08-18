@@ -18,6 +18,8 @@ def bullet_collides_with_bullet(bullet1, bullet2):
   return pygame.sprite.collide_rect(bullet1, bullet2)
 
 def bullet_collides_with_shield(bullet, shield):
+  if bullet.owner is shield.tank and bullet.total_distance < constants.SHIELD_RADIUS_RATIO and not bullet.has_bounced():
+    return False
   return sprite_collide_exact(bullet, shield)
 
 def bullet_collides_with_tank(bullet, tank):

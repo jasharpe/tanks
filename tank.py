@@ -27,6 +27,8 @@ class Tank(pygame.sprite.Sprite):
     self.health = constants.TANK_HEALTH
     self.dead = False
 
+    self.shields = []
+
     self.update_image()
     self.update_graphics()
 
@@ -44,6 +46,8 @@ class Tank(pygame.sprite.Sprite):
     self.health -= 1
     if self.health == 0:
       self.dead = True
+      for shield in self.shields:
+        shield.die()
       return TANK_EXPLODED
     else:
       self.update_image()

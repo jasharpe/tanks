@@ -51,6 +51,7 @@ class Level:
 
     self.powerups = pygame.sprite.RenderPlain()
     self.powerups.add(Powerup(2, 2))
+    self.powerups.add(Powerup(4, 2))
 
     self.shields = pygame.sprite.RenderPlain()
 
@@ -201,9 +202,10 @@ class Level:
       if particle.age >= particle.max_age:
         particle.remove(self.trail_particles)
 
-    for shield in self.shields:
+    for shield in self.player.shields:
       if shield.to_remove:
         shield.remove(self.shields)
+        self.player.shields.remove(shield)
 
 
     for shockwave in self.shockwaves:
@@ -304,14 +306,16 @@ class Level:
     # apply powerups
     for powerup in self.powerups:
       if not powerup.taken:
-        if tank_collides_with_powerup(self.player, powerup):
+        if not self.player.shields and tank_collides_with_powerup(self.player, powerup):
           self.game.register_event(PlaySoundEvent(self, "pickup", 0.2))
           powerup.take(self.player)
 
       if powerup.done:
         self.game.register_event(PlaySoundEvent(self, "powerup", 0.2))
         self.powerups.remove(powerup)
-        self.shields.add(Shield(self.player))
+        shield = Shield(self.player)
+        self.shields.add(shield)
+        self.player.shields.append(shield)
         for i in xrange(0, constants.POWERUP_PARTICLES):
           angle = i * 2 * math.pi / constants.POWERUP_PARTICLES
           d = Vector(angle)
