@@ -4,6 +4,7 @@ from victory import VictoryScreen
 from sound import *
 from level_loader import load_level
 import getopt
+from font import FontManager
 
 FRAME_MS = 16
 MAX_SKIPPED_DRAWS = 5
@@ -15,6 +16,7 @@ STAGE_VICTORY = 3
 class Game:
   def __init__(self, starting_level=None):
     self.settings = constants.DEFAULT_SETTINGS
+    self.font_manager = FontManager(self.settings)
     self.sound_manager = SoundManager(self.settings)
     self.sound_manager.trigger_music("movemovemove.ogg", 0.7)
     if starting_level is not None:
@@ -170,9 +172,10 @@ def main(argv):
       game.draw(screen) 
       pygame.display.flip()
 
-      #time = (current_time - last_current_time)
-      #if time > 1:
-        #print "Last frame took %d" % (time)
+      time = (current_time - last_current_time)
+      if time > 1:
+        if game.settings['debug']:
+          print "Last frame took %d" % (time)
     
     last_current_time = current_time
 

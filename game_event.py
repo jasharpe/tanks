@@ -62,6 +62,13 @@ class ToggleSoundEvent(Event):
   def do(self):
     self.game.settings['sound'] = not self.game.settings['sound']
 
+class ToggleDebugEvent(Event):
+  def __init__(self):
+    Event.__init__(self)
+
+  def do(self):
+    self.game.settings['debug'] = not self.game.settings['debug']
+
 class AdvanceLevelEvent:
   def __init__(self, level):
     self.level = level  

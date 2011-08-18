@@ -3,58 +3,52 @@ import constants
 from game_event import *
 
 class MenuItem:
-  def __init__(self, text, on_activate):
+  def __init__(self, menu, text, on_activate):
+    self.menu = menu
     self.raw_text = text
     self.activate = on_activate
     self.selected = False
 
   def toggle_selected(self):
     self.selected = not self.selected
-    self.generate_image()
 
 class BasicItem(MenuItem):
-  def __init__(self, text, on_activate):
-    MenuItem.__init__(self, text, on_activate)
-    self.generate_image()
+  def __init__(self, menu, text, on_activate):
+    MenuItem.__init__(self, menu, text, on_activate)
+    self.last_selected = None
 
   def generate_image(self):
-    color = (200, 200, 200)
-    if self.selected:
-      color = (255, 200, 200)
-    self.image = pygame.font.Font(None, 36).render(self.raw_text, 1, color)
+    if self.last_selected is None or not self.last_selected is self.selected:
+      color = (200, 200, 200)
+      if self.selected:
+        color = (255, 200, 200)
+      self.image = self.menu.game.font_manager.get_font(36).render(self.raw_text, 1, color)
+    self.last_selected = self.selected
 
 class CheckItem(MenuItem):
-  def __init__(self, game, text, value_function, on_activate):
-    MenuItem.__init__(self, text, on_activate)
-    self.game = game
+  def __init__(self, menu, text, value_function, on_activate):
+    MenuItem.__init__(self, menu, text, on_activate)
     self.value_function = value_function
-    self.generate_image()
+    self.last_value = None #value_function(menu.game)
+    self.last_selected = None
 
   def generate_image(self):
-    color = (200, 200, 200)
-    if self.selected:
-      color = (255, 200, 200)
-    text = pygame.font.Font(None, 36).render(self.raw_text, 1, color)
-    self.image = pygame.Surface((text.get_width() + text.get_height() + 5, text.get_height()), flags=pygame.SRCALPHA)
-    rect = pygame.Rect(1, 1, text.get_height() - 1, text.get_height() - 1)
-    pygame.draw.rect(self.image, color, rect, 1)
-    if self.value_function(self.game):
-      pygame.draw.line(self.image, color, rect.topleft, rect.bottomright, 1)
-      topright = (rect.topright[0] - 1, rect.topright[1])
-      pygame.draw.line(self.image, color, rect.bottomleft, topright, 1)
-    self.image.blit(text, (text.get_height() + 5, 0))
-
-def resume_menu_action(game):
-  game.register_event(ResumeEvent())
-
-def new_game_menu_action(game):
-  game.register_event(NewGameEvent())
-
-def settings_menu_action(game):
-  game.register_event(EnterMenuEvent(SettingsMenu(game)))
-
-def quit_menu_action(game):
-  game.register_event(QuitEvent())
+    if (self.last_selected is None or not self.last_selected is self.selected) or \
+       (self.last_value is None or not self.last_value is self.value_function(self.menu.game)):
+      color = (200, 200, 200)
+      if self.selected:
+        color = (255, 200, 200)
+      text = self.menu.game.font_manager.get_font(36).render(self.raw_text, 1, color)
+      self.image = pygame.Surface((text.get_width() + text.get_height() + 5, text.get_height()), flags=pygame.SRCALPHA)
+      rect = pygame.Rect(1, 1, text.get_height() - 1, text.get_height() - 1)
+      pygame.draw.rect(self.image, color, rect, 1)
+      if self.value_function(self.menu.game):
+        pygame.draw.line(self.image, color, rect.topleft, rect.bottomright, 1)
+        topright = (rect.topright[0] - 1, rect.topright[1])
+        pygame.draw.line(self.image, color, rect.bottomleft, topright, 1)
+      self.image.blit(text, (text.get_height() + 5, 0))
+    self.last_selected = self.selected
+    self.last_value = self.value_function(self.menu.game)
 
 class Menu:
   def __init__(self, game):
@@ -73,6 +67,11 @@ class Menu:
           self.menu_items[self.selected].toggle_selected()
         elif event.key == pygame.K_RETURN:
           self.menu_items[self.selected].activate(self.game)
+        elif self.game.settings['debug'] and event.key == pygame.K_n:
+          if event.mod & pygame.KMOD_LSHIFT:
+            self.menu.game.font_manager.previous_font()
+          else:
+            self.menu.game.font_manager.next_font()
 
   def draw(self, screen):
     image_top = 300
@@ -83,39 +82,34 @@ class Menu:
       image_top += menu_item.image.get_height() + 5
       screen.blit(menu_item.image, image_pos)
 
-def settings_back_menu_action(game):
-  game.register_event(MenuBackEvent())
+def register_event(event, *args):
+  return lambda game: game.register_event(event(*args))
 
-def music_menu_value(game):
-  return game.settings['music']
-
-def toggle_music_menu_action(game):
-  game.register_event(ToggleMusicEvent())
-
-def sound_menu_value(game):
-  return game.settings['sound']
-
-def toggle_sound_menu_action(game):
-  game.register_event(ToggleSoundEvent())
+def get_setting(val):
+  return lambda game: game.settings[val]
 
 class SettingsMenu(Menu):
   def __init__(self, game):
     Menu.__init__(self, game)
-    self.menu_items = []
-    self.menu_items.append(BasicItem("Back", settings_back_menu_action))
-    self.menu_items.append(CheckItem(self.game, "Music", music_menu_value, toggle_music_menu_action))
-    self.menu_items.append(CheckItem(self.game, "Sound", sound_menu_value, toggle_sound_menu_action))
+    self.menu_items = [
+        BasicItem(self, "Back", register_event(MenuBackEvent)),
+        CheckItem(self, "Music", get_setting('music'), register_event(ToggleMusicEvent)),
+        CheckItem(self, "Sound", get_setting('sound'), register_event(ToggleSoundEvent)),
+        CheckItem(self, "Debug", get_setting('debug'), register_event(ToggleDebugEvent))]
     self.menu_items[0].toggle_selected()
     self.selected = 0
+
+def settings_menu_action(game):
+  game.register_event(EnterMenuEvent(SettingsMenu(game)))
 
 class MainMenu(Menu):
   def __init__(self, game, level):
     Menu.__init__(self, game)
     self.menu_items = []
     if level is not None:
-      self.menu_items.append(BasicItem("Resume", resume_menu_action))
-    self.menu_items.append(BasicItem("New Game", new_game_menu_action))
-    self.menu_items.append(BasicItem("Settings", settings_menu_action))
-    self.menu_items.append(BasicItem("Quit", quit_menu_action))
+      self.menu_items.append(BasicItem(self, "Resume", register_event(ResumeEvent)))
+    self.menu_items.append(BasicItem(self, "New Game", register_event(NewGameEvent)))
+    self.menu_items.append(BasicItem(self, "Settings", settings_menu_action))
+    self.menu_items.append(BasicItem(self, "Quit", register_event(QuitEvent)))
     self.menu_items[0].toggle_selected()
     self.selected = 0

@@ -2,7 +2,8 @@ import pygame
 
 DEFAULT_SETTINGS = {
     'music': True,
-    'sound': True
+    'sound': True,
+    'debug': False
 }
 
 # cheats
