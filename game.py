@@ -5,6 +5,7 @@ from sound import *
 from level_loader import load_level
 import getopt
 from font import FontManager
+from settings import Settings
 
 FRAME_MS = 16
 MAX_SKIPPED_DRAWS = 5
@@ -15,7 +16,7 @@ STAGE_VICTORY = 3
 
 class Game:
   def __init__(self, starting_level=None):
-    self.settings = constants.DEFAULT_SETTINGS
+    self.settings = Settings(constants.DEFAULT_SETTINGS)
     self.font_manager = FontManager(self.settings)
     self.sound_manager = SoundManager(self.settings)
     self.sound_manager.trigger_music("movemovemove.ogg", 0.7)
