@@ -19,14 +19,18 @@ To fire a bullet, hit the left mouse button. It will fire in the direction that 
 
 ## Settings
 
-Music: toggles playing the game music
-Sound: toggles playing game sounds, such as explosions 
+_[Accessed from the "settings" option of the main menu]_
 
-## Debug controls
+* Music: toggles playing the game music
+* Sound: toggles playing game sounds, such as explosions 
+* Debug: toggles some debug features (see below)
 
-_active when the debug option is enabled from the settings menu_
+## Debug mode
 
-* [Shift] + N: In a menu, this will cause the 
+_[Active when the debug option is enabled from the settings menu]_
+
+* Prints the milliseconds taken to render long frames
+* [Shift] + N: In a menu, this will cause the font to change if in sysfont mode, and print the name of the font used
 
 ## Credits
 
