@@ -97,6 +97,8 @@ class Level:
 
     self.timers = []
 
+    self.load_time = constants.LEVEL_LOAD_TIME
+
     self.paused = False
   
   def get_status(self):
@@ -107,6 +109,11 @@ class Level:
     return LEVEL_ONGOING
 
   def update(self, delta, events, pressed, mouse):
+    self.load_time = max(0, self.load_time - delta)
+
+    if self.load_time > 0:
+      return
+    
     for event in events:
       if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
         self.paused = not self.paused
@@ -338,10 +345,10 @@ class Level:
     if not status == self.old_status and self.old_status == LEVEL_ONGOING:
       self.old_status = status
       if status == LEVEL_LOST:
-        self.text = pygame.font.Font(None, 36).render("You lost... Press 'R' to restart", 1, (200, 200, 200))
+        self.text = self.game.font_manager.get_font(36).render("You lost... Press 'R' to restart", 1, (200, 200, 200))
         #self.timers.append(TimedLevelRestart(2000, self))
       if status == LEVEL_BEATEN:
-        self.text = pygame.font.Font(None, 36).render("You won!", 1, (200, 200, 200))
+        self.text = self.game.font_manager.get_font(36).render("You won!", 1, (200, 200, 200))
         self.timers.append(TimedLevelAdvance(2000, self))
 
     to_remove = []
@@ -351,7 +358,19 @@ class Level:
     for timer in to_remove:
       self.timers.remove(timer)
 
+  def write_line(self, line, screen):
+    text = self.game.font_manager.get_font(50).render(line, 1, (200, 200, 200))
+    text_pos = text.get_rect(centerx = constants.RESOLUTION_X / 2)
+    text_pos.top = self.top
+    self.top += text.get_height() + 10
+    screen.blit(text, text_pos)
+
   def draw(self, screen):
+    if self.load_time > 0:
+      self.top = 300
+      self.write_line("%d. %s" % (self.game.current_level, self.name), screen)
+      return
+
     self.non_solid.draw(screen)
     self.tanks.draw(screen)
     self.turrets.draw(screen)

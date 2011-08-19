@@ -2,17 +2,18 @@ import pygame
 import constants
 
 class VictoryScreen:
-  def __init__(self):
+  def __init__(self, game):
+    self.game = game
     self.cooldown = constants.SCREEN_CHANGE_COOLDOWN
 
   def update(self, delta, events, pressed, mouse):
     self.cooldown = max(0, self.cooldown - delta)
 
   def write_line(self, line, screen):
-    text = pygame.font.Font(None, 36).render(line, 1, (200, 200, 200))
+    text = self.game.font_manager.get_font(36).render(line, 1, (200, 200, 200))
     text_pos = text.get_rect(centerx = constants.RESOLUTION_X / 2)
     text_pos.top = self.top
-    self.top += text.get_height()
+    self.top += text.get_height() + 10
     screen.blit(text, text_pos)
 
   def draw(self, screen):

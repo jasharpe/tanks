@@ -69,7 +69,7 @@ class Game:
       self.max_level = max(self.max_level, self.current_level)
     except:
       self.level = None
-      self.victory = VictoryScreen()
+      self.victory = VictoryScreen(self)
       self.stage = STAGE_VICTORY
 
   def restart_level(self):

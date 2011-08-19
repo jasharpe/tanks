@@ -27,11 +27,12 @@ class FontManager:
       print self.fonts[self.font]
 
   def get_numeral_font(self, size):
+    return self.get_font(size)
     return pygame.font.Font(os.path.join(constants.DATA_DIR, "Army.ttf"), 36)
     return pygame.font.SysFont(font, 36)
     return pygame.font.SysFont("arial", size)
 
   def get_font(self, size):
-    return pygame.font.Font(os.path.join(constants.DATA_DIR, "Army.ttf"), 36)
+    return pygame.font.Font(os.path.join(constants.DATA_DIR, "Army.ttf"), size)
     return pygame.font.SysFont(font, 36)
     #return pygame.font.SysFont(self.fonts[self.font], size)

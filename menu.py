@@ -23,10 +23,7 @@ class BasicItem(MenuItem):
       color = (200, 200, 200)
       if self.selected:
         color = (255, 200, 200)
-      if re.match("[0-9]", self.raw_text):
-        font = self.menu.game.font_manager.get_numeral_font(36)
-      else:
-        font = self.menu.game.font_manager.get_font(36)
+      font = self.menu.game.font_manager.get_font(50)
       self.image = font.render(self.raw_text.upper(), 1, color)
     self.last_selected = self.selected
 
@@ -43,7 +40,7 @@ class CheckItem(MenuItem):
       color = (200, 200, 200)
       if self.selected:
         color = (255, 200, 200)
-      text = self.menu.game.font_manager.get_font(36).render(self.raw_text, 1, color)
+      text = self.menu.game.font_manager.get_font(50).render(self.raw_text, 1, color)
       self.image = pygame.Surface((text.get_width() + text.get_height() + 5, text.get_height()), flags=pygame.SRCALPHA)
       rect = pygame.Rect(1, 1, text.get_height() - 1, text.get_height() - 1)
       pygame.draw.rect(self.image, color, rect, 1)
@@ -62,7 +59,7 @@ class Menu:
     if game.level is not None:
       level_text = '%d. %s' % (game.current_level, game.level.name)
       if re.match("[0-9]", level_text):
-        font = self.game.font_manager.get_numeral_font(36)
+        font = self.game.font_manager.get_numeral_font(50)
       else:
         font = self.game.font_manager.get_font(36)
       self.level_image = font.render(level_text, 1, (200, 200, 200))
