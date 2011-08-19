@@ -20,6 +20,13 @@ class Game:
     self.font_manager = FontManager(self.settings)
     self.sound_manager = SoundManager(self.settings)
     self.sound_manager.trigger_music("movemovemove.ogg", 0.7)
+    self.levels = []
+    for i in xrange(1, 10000):
+      try:
+        level = load_level(i, self)
+        self.levels.append(level.name)
+      except:
+        break
     if starting_level is not None:
       self.current_level = starting_level
       self.max_level = self.current_level

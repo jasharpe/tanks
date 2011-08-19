@@ -19,6 +19,8 @@ def load_level(number, game):
   def process(line):
     return filter(None, re.split("[(), ]", line))
 
+  name = read()
+
   # board size
   board_size = process(read())
   width = int(board_size[0])
@@ -90,4 +92,4 @@ def load_level(number, game):
   # by another tile or not)
   board.fix_accessibility()
 
-  return Level(game, player_start, math.pi * player_direction / 180.0, board, enemies, powerups)
+  return Level(name, game, player_start, math.pi * player_direction / 180.0, board, enemies, powerups)

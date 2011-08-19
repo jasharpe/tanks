@@ -39,4 +39,4 @@ _[Active when the debug option is enabled from the settings menu]_
 All code, art and sound effects were produced by Jeremy Sharpe, with the exception of the following acknowledgements:
 
 * Thanks to JewelBeat.com for the music, "Move, Move, Move"
-* Thanks to Andreas Johansson (http://hem.passagen.se/anjo77/font/), for his font Wartorn
+* Thanks to ALLTYPE for the font "Army"

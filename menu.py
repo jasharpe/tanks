@@ -27,7 +27,7 @@ class BasicItem(MenuItem):
         font = self.menu.game.font_manager.get_numeral_font(36)
       else:
         font = self.menu.game.font_manager.get_font(36)
-      self.image = font.render(self.raw_text, 1, color)
+      self.image = font.render(self.raw_text.upper(), 1, color)
     self.last_selected = self.selected
 
 class CheckItem(MenuItem):
@@ -58,6 +58,14 @@ class CheckItem(MenuItem):
 class Menu:
   def __init__(self, game):
     self.game = game
+    self.level_image = None
+    if game.level is not None:
+      level_text = '%d. %s' % (game.current_level, game.level.name)
+      if re.match("[0-9]", level_text):
+        font = self.game.font_manager.get_numeral_font(36)
+      else:
+        font = self.game.font_manager.get_font(36)
+      self.level_image = font.render(level_text, 1, (200, 200, 200))
 
   def update(self, delta, events, pressed, mouse):
     for event in events:
@@ -79,6 +87,10 @@ class Menu:
             self.game.font_manager.next_font()
 
   def draw(self, screen):
+    if not self.level_image is None:
+      image_pos = self.level_image.get_rect(centerx = constants.RESOLUTION_X / 2)
+      image_pos.top = 200
+      screen.blit(self.level_image, image_pos)
     image_top = 300
     for menu_item in self.menu_items:
       menu_item.generate_image()
@@ -111,9 +123,9 @@ class LevelMenu(Menu):
     self.menu_items = [
         BasicItem(self, "Back", register_event(MenuBackEvent))
     ]
-    for i in xrange(1, game.max_level + 1):
+    for i in xrange(0, game.max_level):
       self.menu_items.append(
-          BasicItem(self, str(i), register_event(GoToLevelEvent, i))
+          BasicItem(self, "%d. %s" % (i + 1, game.levels[i]), register_event(GoToLevelEvent, i + 1))
       )
     self.menu_items[0].toggle_selected()
     self.selected = 0

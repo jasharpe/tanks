@@ -42,7 +42,8 @@ class TimedLevelRestart:
     return False
 
 class Level:
-  def __init__(self, game, player_start, player_direction, board, enemies, powerups):
+  def __init__(self, name, game, player_start, player_direction, board, enemies, powerups):
+    self.name = name
     self.game = game
 
     self.player_start = player_start
