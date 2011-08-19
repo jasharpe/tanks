@@ -1,4 +1,4 @@
-import constants, os
+import constants, os, ast
 
 class Settings:
   def __init__(self, default_settings):
@@ -8,7 +8,7 @@ class Settings:
         for line in f.readlines():
           line = line.rstrip().split(":")
           (k, v) = line
-          self.d[k] = v == 'True'
+          self.d[k] = ast.literal_eval(v)
     except Exception as e:
       print e
 

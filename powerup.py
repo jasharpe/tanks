@@ -2,12 +2,13 @@ import pygame
 import constants
 from geometry import *
 from interpolation import *
+from shield import Shield
 
 class Powerup(pygame.sprite.Sprite):
-  def __init__(self, x, y):
+  def __init__(self, p):
     pygame.sprite.Sprite.__init__(self)
 
-    self.position = Point(x + 0.5, y + 0.5)
+    self.position = p
     self.picked_up = False
 
     self.colour_time = 0
@@ -49,3 +50,7 @@ class Powerup(pygame.sprite.Sprite):
       self.speed = self.speed + constants.POWERUP_ACCEL * (delta / 1000.0)
       self.position = self.position.translate(self.speed * d * (delta / 1000.0))
     self.update_graphics()
+
+class ShieldPowerup(Powerup):
+  def effect(self):
+    return Shield

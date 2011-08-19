@@ -8,7 +8,7 @@ from tank import Tank, Turret, TANK_EXPLODED
 from bullet import BOUNCED, EXPLODED
 from explosion import Explosion, Shockwave
 from game_event import RestartLevelEvent, AdvanceLevelEvent, PlaySoundEvent
-from powerup import Powerup
+from powerup import ShieldPowerup
 from collision import *
 from particle import *
 from shield import Shield
@@ -42,7 +42,7 @@ class TimedLevelRestart:
     return False
 
 class Level:
-  def __init__(self, game, player_start, player_direction, board, enemies):
+  def __init__(self, game, player_start, player_direction, board, enemies, powerups):
     self.game = game
 
     self.player_start = player_start
@@ -50,8 +50,8 @@ class Level:
     self.board = board
 
     self.powerups = pygame.sprite.RenderPlain()
-    self.powerups.add(Powerup(2, 2))
-    self.powerups.add(Powerup(4, 2))
+    for (position) in powerups:
+      self.powerups.add(ShieldPowerup(position))
 
     self.shields = pygame.sprite.RenderPlain()
 
@@ -306,16 +306,19 @@ class Level:
     # apply powerups
     for powerup in self.powerups:
       if not powerup.taken:
-        if not self.player.shields and tank_collides_with_powerup(self.player, powerup):
+        if not self.player.taking and not self.player.shields and tank_collides_with_powerup(self.player, powerup):
           self.game.register_event(PlaySoundEvent(self, "pickup", 0.2))
           powerup.take(self.player)
+          self.player.taking = True
 
       if powerup.done:
         self.game.register_event(PlaySoundEvent(self, "powerup", 0.2))
         self.powerups.remove(powerup)
-        shield = Shield(self.player)
-        self.shields.add(shield)
-        self.player.shields.append(shield)
+
+        effect = powerup.effect()(self.player)
+        self.shields.add(effect)
+        self.player.taking = False
+        self.player.shields.append(effect)
         for i in xrange(0, constants.POWERUP_PARTICLES):
           angle = i * 2 * math.pi / constants.POWERUP_PARTICLES
           d = Vector(angle)

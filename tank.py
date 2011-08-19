@@ -27,6 +27,8 @@ class Tank(pygame.sprite.Sprite):
     self.health = constants.TANK_HEALTH
     self.dead = False
 
+    self.taking = False
+
     self.shields = []
 
     self.update_image()

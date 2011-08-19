@@ -44,7 +44,7 @@ def load_level(number, game):
     line = read()
     if line == "END ENEMIES":
       break
-    enemy_info =  process(line)
+    enemy_info = process(line)
     position = Point(int(enemy_info[0]) + 0.5, int(enemy_info[1]) + 0.5)
 
     if not (0 <= position.x < width) or \
@@ -63,10 +63,14 @@ def load_level(number, game):
   start_powerups = read()
   if not start_powerups == "START POWERUPS":
     raise Exception("Excepted 'START POWERUPS' but got %s" % start_powerups)
+  powerups = []
   while True:
     line = read()
     if line == "END POWERUPS":
       break
+    powerup_info = process(line)
+    position = Point(int(powerup_info[0]) + 0.5, int(powerup_info[1]) + 0.5)
+    powerups.append((position))
 
   # tiles
   board = Board(width, height)
@@ -86,4 +90,4 @@ def load_level(number, game):
   # by another tile or not)
   board.fix_accessibility()
 
-  return Level(game, player_start, math.pi * player_direction / 180.0, board, enemies)
+  return Level(game, player_start, math.pi * player_direction / 180.0, board, enemies, powerups)
