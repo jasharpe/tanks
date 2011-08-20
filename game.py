@@ -109,7 +109,7 @@ class Game:
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
           self.enter_menu()
       elif self.stage is STAGE_VICTORY:
-        if event.type == pygame.KEYDOWN:
+        if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
           if self.victory.cooldown == 0:
             self.enter_menu()
 

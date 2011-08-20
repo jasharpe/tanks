@@ -12,6 +12,7 @@ from powerup import ShieldPowerup
 from collision import *
 from particle import *
 from shield import Shield
+from level_stats import LevelStats
 
 LEVEL_ONGOING = 1
 LEVEL_BEATEN = 2
@@ -27,6 +28,20 @@ class TimedLevelAdvance:
     self.time_left = max(0, self.time_left)
     if self.time_left == 0:
       self.level.game.register_event(AdvanceLevelEvent(self.level))
+    return self.time_left == 0
+
+class TimedLevelVictory:
+  def __init__(self, time, level):
+    self.level = level
+    self.time_left = time
+
+  def update(self, delta):
+    self.time_left -= delta
+    self.time_left = max(0, self.time_left)
+    if self.time_left == 0:
+      self.level.victory = True
+      self.level.cooldown = constants.SCREEN_CHANGE_COOLDOWN
+    return self.time_left == 0
 
 class TimedLevelRestart:
   def __init__(self, time, level):
@@ -38,11 +53,11 @@ class TimedLevelRestart:
     self.time_left = max(0, self.time_left)
     if self.time_left == 0:
       self.level.game.register_event(RestartLevelEvent(self.level))
-      return True
-    return False
+    return self.time_left == 0
 
 class Level:
   def __init__(self, name, game, player_start, player_direction, board, enemies, powerups):
+    self.stats = LevelStats()
     self.name = name
     self.game = game
 
@@ -98,6 +113,8 @@ class Level:
     self.timers = []
 
     self.load_time = constants.LEVEL_LOAD_TIME
+    self.victory = False
+    self.cooldown = 0
 
     self.paused = False
   
@@ -113,9 +130,13 @@ class Level:
 
     if self.load_time > 0:
       return
+
+    self.cooldown = max(0, self.cooldown - delta)
     
     for event in events:
-      if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+      if self.victory and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN) and self.cooldown == 0:
+        self.game.register_event(AdvanceLevelEvent(self))
+      elif event.type == pygame.KEYDOWN and event.key == pygame.K_p:
         self.paused = not self.paused
     
     # if paused, don't update this frame
@@ -178,6 +199,7 @@ class Level:
       if bullet is not None:
         self.game.register_event(PlaySoundEvent(self, "fire"))
         self.bullets.add(bullet)
+        self.stats.bullet_fired(bullet)
 
     # turret control
     # mouse position
@@ -191,6 +213,7 @@ class Level:
         if not bullet is None:
           self.game.register_event(PlaySoundEvent(self, "fire"))
           self.bullets.add(bullet)
+          self.stats.bullet_fired(bullet)
 
     self.enemy_turrets.update(delta)
     self.turrets.update(delta)
@@ -241,16 +264,20 @@ class Level:
           self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
           bullet.remove(self.bullets)
           bullet.die()
+
+          self.stats.bullet_hit(bullet, shield.tank)
       if bullet.dead: continue
 
       if not self.player.dead and bullet_collides_with_tank(bullet, self.player):
         # do something to the player
         result = self.player.hurt()
+        self.stats.bullet_hit(bullet, self.player)
         if result is TANK_EXPLODED:
           self.game.register_event(PlaySoundEvent(self, "tank_explode"))
           self.explosions.add(Explosion(self.player.position.x, self.player.position.y, constants.BIG_EXPLOSION_MAX_RATIO, constants.BIG_EXPLOSION_MIN_RATIO))
           self.player.remove(self.tanks)
           self.player.turret.remove(self.turrets)
+          self.stats.kill(bullet, self.player)
         else:
           self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
 
@@ -264,11 +291,13 @@ class Level:
         if bullet_collides_with_tank(bullet, enemy):
           # damage the enemy
           result = enemy.hurt()
+          self.stats.bullet_hit(bullet, enemy)
           if result is TANK_EXPLODED:
             self.game.register_event(PlaySoundEvent(self, "tank_explode"))
             self.explosions.add(Explosion(enemy.position.x, enemy.position.y, constants.BIG_EXPLOSION_MAX_RATIO, constants.BIG_EXPLOSION_MIN_RATIO))
             enemy.remove(self.enemies)
             enemy.turret.remove(self.enemy_turrets)
+            self.stats.kill(bullet, enemy)
           else:
             self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
 
@@ -289,6 +318,8 @@ class Level:
           self.explosions.add(Explosion(bullet2.position.x, bullet2.position.y))
           bullet2.remove(self.bullets)
           bullet2.die()
+
+          self.stats.bullet_collision(bullet, bullet2)
       if bullet.dead: continue
 
       # check for bullets reaching max range
@@ -349,7 +380,7 @@ class Level:
         #self.timers.append(TimedLevelRestart(2000, self))
       if status == LEVEL_BEATEN:
         self.text = self.game.font_manager.get_font(36).render("You won!", 1, (200, 200, 200))
-        self.timers.append(TimedLevelAdvance(2000, self))
+        self.timers.append(TimedLevelVictory(2000, self))
 
     to_remove = []
     for timer in self.timers:
@@ -365,10 +396,40 @@ class Level:
     self.top += text.get_height() + 10
     screen.blit(text, text_pos)
 
+  def write_stat_line(self, part1, part2, screen):
+    text = self.game.font_manager.get_font(40).render(part1, 1, (200, 200, 200))
+    text_pos = text.get_rect(right = constants.RESOLUTION_X / 2)
+    text_pos.top = self.top
+    screen.blit(text, text_pos)
+    text = self.game.font_manager.get_font(40).render(part2, 1, (200, 200, 200))
+    text_pos = text.get_rect(left = 3 * constants.RESOLUTION_X / 4)
+    text_pos.top = self.top
+    self.top += text.get_height() + 10
+    screen.blit(text, text_pos)
+
   def draw(self, screen):
     if self.load_time > 0:
       self.top = 300
       self.write_line("%d. %s" % (self.game.current_level, self.name), screen)
+      return
+
+    if self.victory:
+      # draw a stat screen
+      self.top = 150
+      self.write_line("Victory!", screen)
+      self.top += 50
+      self.write_stat_line("Fired Shots:", "%d" % self.stats.fired_shots(self.player), screen)
+      self.write_stat_line("Hits:", "%d" % self.stats.hit_shots(self.player), screen)
+      self.write_stat_line("Blocked Shots:", "%d" % self.stats.blocked_shots(self.player), screen)
+      accuracy = int(round(self.stats.accuracy(self.player) * 100))
+      self.write_stat_line("Accuracy:", "%d%%" % accuracy, screen)
+      kill_total = self.stats.kill_total(self.player)
+      self.write_stat_line("Kills:", "%d" % kill_total, screen)
+      friendly_fire_kills = self.stats.friendly_fire_kills(self.player)
+      self.write_stat_line("FF Kills:", "%d" % friendly_fire_kills, screen)
+      if self.cooldown == 0:
+        self.top += 50
+        self.write_line("(Press any key to continue)", screen)
       return
 
     self.non_solid.draw(screen)

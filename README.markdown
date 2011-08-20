@@ -39,3 +39,4 @@ _[Active when the debug option is enabled from the settings menu]_
 All code, art and sound effects were produced by Jeremy Sharpe, with the exception of the following acknowledgements:
 
 * Thanks to JewelBeat.com for the music, "Move, Move, Move"
+* The menu font, "Army", the original source of which is unknown
