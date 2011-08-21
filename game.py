@@ -7,9 +7,6 @@ import getopt
 from font import FontManager
 from settings import Settings
 
-FRAME_MS = 16
-MAX_SKIPPED_DRAWS = 5
-
 STAGE_LEVEL = 1
 STAGE_MENU = 2
 STAGE_VICTORY = 3
@@ -135,69 +132,3 @@ class Game:
       self.menu.draw(screen)
     elif self.stage is STAGE_VICTORY:
       self.victory.draw(screen)
-
-def usage():
-  print '''-l for starting level (for debug purposes)'''
-
-def main(argv):
-  try:
-    opts, args = getopt.getopt(argv[1:], "l:", ["level="])
-  except getopt.GetoptError:
-    usage()
-    return 2
-
-  starting_level = None
-  for opt, arg in opts:
-    if opt in ("-l", "--level"):
-      starting_level = int(arg)
-
-  pygame.mixer.pre_init(frequency=22050, size=-16, channels=16, buffer=512)
-  pygame.init()
-  screen = pygame.display.set_mode(
-      [constants.RESOLUTION_X, constants.RESOLUTION_Y])
-  pygame.display.set_caption('Tanks!')
-
-  game = Game(starting_level)
-
-  last_update_time = pygame.time.get_ticks()
-  last_current_time = last_update_time
-  exit_program = False
-  while True:
-    current_time = pygame.time.get_ticks()
-    if current_time - last_update_time >= FRAME_MS:
-      delta = FRAME_MS
-
-      # event handling
-      events = pygame.event.get()
-      for event in events:
-        if event.type == pygame.QUIT:
-          exit_program = True
-
-      if exit_program:
-        break
-    
-      pressed = pygame.key.get_pressed()
-      mouse = pygame.mouse.get_pos()
-
-      if game.update(delta, events, pressed, mouse):
-        break
-
-      last_update_time += FRAME_MS
-
-      # draw
-      screen.fill((0, 0, 0))
-      game.draw(screen) 
-      pygame.display.flip()
-
-      time = (current_time - last_current_time)
-      if time > 1:
-        if game.settings['debug']:
-          print "Last frame took %d" % (time)
-    
-    last_current_time = current_time
-
-  pygame.quit()
-  return 0
-
-if __name__ == "__main__":
-  sys.exit(main(sys.argv))

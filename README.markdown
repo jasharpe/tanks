@@ -10,7 +10,7 @@ Requires pygame to be installed. Developed on python 2.7 and Windows 7, other ve
 
 Run the game by typing
 
-  python game.py
+    python main.py
   
 at the command line while in the top level directory.
 
