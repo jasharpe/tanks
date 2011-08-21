@@ -21,6 +21,7 @@ class Game:
     self.sound_manager = SoundManager(self.settings)
     self.sound_manager.trigger_music("movemovemove.ogg", 0.7)
     self.levels = []
+    # this is dumb :P
     for i in xrange(1, 10000):
       try:
         level = load_level(i, self)

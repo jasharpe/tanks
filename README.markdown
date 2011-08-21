@@ -1,5 +1,19 @@
 Tanks! is a game implemented with pygame in which the player must use a tank to destroy other tanks and assorted other dangerous foes.
 
+## How to Use
+
+# Dependencies, version and OS info
+
+Requires pygame to be installed. Developed on python 2.7 and Windows 7, other versions or OSes are supported, but I may not know if they work or not. Please let me know if they don't and I'll try to fix.
+
+# How to run
+
+Run the game by typing
+
+  python game.py
+  
+at the command line while in the top level directory.
+
 ## Controls
 
 The tank's driving is controlled by either the arrow keys or WASD:
@@ -32,7 +46,6 @@ _[Accessed from the "settings" option of the main menu]_
 _[Active when the debug option is enabled from the settings menu]_
 
 * Prints the milliseconds taken to render long frames
-* [Left Shift] + N: In a menu, this will cause the font to change if in sysfont mode, and print the name of the font used (forward a font with just N, or backwards with Left Shift + N)
 
 ## Credits
 

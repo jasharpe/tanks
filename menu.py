@@ -10,6 +10,9 @@ class MenuItem:
     self.activate = on_activate
     self.selected = False
 
+  def get_color(self):
+    return constants.SELECTED_TEXT_COLOR if self.selected else constants.DEFAULT_TEXT_COLOR
+
   def toggle_selected(self):
     self.selected = not self.selected
 
@@ -20,11 +23,7 @@ class BasicItem(MenuItem):
 
   def generate_image(self):
     if self.last_selected is None or not self.last_selected is self.selected:
-      color = (200, 200, 200)
-      if self.selected:
-        color = (255, 200, 200)
-      font = self.menu.game.font_manager.get_font(50)
-      self.image = font.render(self.raw_text.upper(), 1, color)
+      self.image = self.menu.game.font_manager.render(self.raw_text.upper(), 50, self.get_color())
     self.last_selected = self.selected
 
 class CheckItem(MenuItem):
@@ -37,10 +36,8 @@ class CheckItem(MenuItem):
   def generate_image(self):
     if (self.last_selected is None or not self.last_selected is self.selected) or \
        (self.last_value is None or not self.last_value is self.value_function(self.menu.game)):
-      color = (200, 200, 200)
-      if self.selected:
-        color = (255, 200, 200)
-      text = self.menu.game.font_manager.get_font(50).render(self.raw_text, 1, color)
+      color = self.get_color()
+      text = self.menu.game.font_manager.render(self.raw_text, 50, color)
       self.image = pygame.Surface((text.get_width() + text.get_height() + 5, text.get_height()), flags=pygame.SRCALPHA)
       rect = pygame.Rect(1, 1, text.get_height() - 1, text.get_height() - 1)
       pygame.draw.rect(self.image, color, rect, 1)
@@ -55,14 +52,6 @@ class CheckItem(MenuItem):
 class Menu:
   def __init__(self, game):
     self.game = game
-    self.level_image = None
-    if game.level is not None:
-      level_text = '%d. %s' % (game.current_level, game.level.name)
-      if re.match("[0-9]", level_text):
-        font = self.game.font_manager.get_numeral_font(50)
-      else:
-        font = self.game.font_manager.get_font(36)
-      self.level_image = font.render(level_text, 1, (200, 200, 200))
 
   def update(self, delta, events, pressed, mouse):
     for event in events:
@@ -77,17 +66,14 @@ class Menu:
           self.menu_items[self.selected].toggle_selected()
         elif event.key == pygame.K_RETURN:
           self.menu_items[self.selected].activate(self.game)
-        elif self.game.settings['debug'] and event.key == pygame.K_n:
-          if event.mod & pygame.KMOD_LSHIFT:
-            self.game.font_manager.previous_font()
-          else:
-            self.game.font_manager.next_font()
 
   def draw(self, screen):
-    if not self.level_image is None:
-      image_pos = self.level_image.get_rect(centerx = constants.RESOLUTION_X / 2)
+    if not self.game.level is None:
+      level_text = '%d. %s' % (self.game.current_level, self.game.level.name)
+      level_image = self.game.font_manager.render(level_text, 50, constants.DEFAULT_TEXT_COLOR)
+      image_pos = level_image.get_rect(centerx = constants.RESOLUTION_X / 2)
       image_pos.top = 200
-      screen.blit(self.level_image, image_pos)
+      screen.blit(level_image, image_pos)
     image_top = 300
     for menu_item in self.menu_items:
       menu_item.generate_image()

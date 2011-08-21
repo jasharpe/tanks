@@ -20,7 +20,7 @@ def quadratic(val, max, min=0):
 def quadratic_bi(val, max, min=0):
   return ease(linear_bi(val, max, min), lambda x: x ** 2)
 
-def interpolate_colours(t, c1, c2):
+def interpolate_colors(t, c1, c2):
   return pygame.Color(
       int(round(c1.r * t + c2.r * (1 - t))),
       int(round(c1.g * t + c2.g * (1 - t))),

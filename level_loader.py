@@ -71,8 +71,9 @@ def load_level(number, game):
     if line == "END POWERUPS":
       break
     powerup_info = process(line)
-    position = Point(int(powerup_info[0]) + 0.5, int(powerup_info[1]) + 0.5)
-    powerups.append((position))
+    powerup_type = powerup_info[0]
+    position = Point(int(powerup_info[1]) + 0.5, int(powerup_info[2]) + 0.5)
+    powerups.append((powerup_type, position))
 
   # tiles
   board = Board(width, height)

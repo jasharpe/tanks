@@ -27,7 +27,7 @@ class Tank(pygame.sprite.Sprite):
     self.health = constants.TANK_HEALTH
     self.dead = False
 
-    self.taking = False
+    self.taking = set()
 
     self.shields = []
 
@@ -54,6 +54,11 @@ class Tank(pygame.sprite.Sprite):
     else:
       self.update_image()
       self.update_graphics()
+
+  def heal(self):
+    self.health = min(self.health + 1, constants.TANK_HEALTH)
+    self.update_image()
+    self.update_graphics()
 
   # this returns the tank to its position before the last update()
   # call. It is important that this be idempotent.

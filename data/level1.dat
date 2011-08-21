@@ -1,3 +1,4 @@
+# level name
 The Perilous Journey
 
 # board size
@@ -16,7 +17,7 @@ START ENEMIES
 END ENEMIES
 
 START POWERUPS
-(2, 2)
+SHIELD,(2, 2)
 END POWERUPS
 
 

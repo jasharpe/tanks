@@ -4,11 +4,11 @@ from interpolation import *
 import utils
 
 class TrailParticle(pygame.sprite.Sprite):
-  def __init__(self, position, colour):
+  def __init__(self, position, color):
     pygame.sprite.Sprite.__init__(self)
 
     self.position = position
-    self.colour = colour
+    self.color = color
     self.age = 0
     self.max_age = constants.TRAIL_PARTICLE_AGE
 
@@ -16,9 +16,9 @@ class TrailParticle(pygame.sprite.Sprite):
 
   def update_graphics(self):
     self.image = pygame.Surface([3, 3], flags=pygame.SRCALPHA)
-    colour = self.colour
-    colour.a = int(round(255 * (1 - linear(self.age, constants.TRAIL_PARTICLE_AGE))))
-    self.image.fill(colour)
+    color = self.color
+    color.a = int(round(255 * (1 - linear(self.age, constants.TRAIL_PARTICLE_AGE))))
+    self.image.fill(color)
     self.rect = self.image.get_rect(center=self.position.scale(constants.TILE_SIZE))
 
   def update(self, delta):
@@ -27,14 +27,14 @@ class TrailParticle(pygame.sprite.Sprite):
 
 # these are shot off when a powerup is taken and disappears
 class PowerupParticle(pygame.sprite.Sprite):
-  def __init__(self, position, direction, colour_time):
+  def __init__(self, position, direction, color_time):
     pygame.sprite.Sprite.__init__(self)
 
     self.position = position
     self.actual_position = position
     self.direction = direction
     self.trail_counter = 0
-    self.colour_time = colour_time
+    self.color_time = color_time
     self.age = 0
     self.max_age = constants.POWERUP_PARTICLE_AGE
     self.distance_travelled = 0
@@ -47,23 +47,23 @@ class PowerupParticle(pygame.sprite.Sprite):
 
     self.update_graphics()
 
-  def get_colour(self):
-    r = quadratic_bi(self.colour_time, constants.POWERUP_COLOUR_MODULATION_TIME)
-    c = interpolate_colours(r, constants.POWERUP_COLOR_ONE, constants.POWERUP_COLOR_TWO)
+  def get_color(self):
+    r = quadratic_bi(self.color_time, constants.POWERUP_COLOR_MODULATION_TIME)
+    c = interpolate_colors(r, constants.POWERUP_COLOR_ONE, constants.POWERUP_COLOR_TWO)
     c.a = int(round(255 * (1 - linear(self.age, constants.POWERUP_PARTICLE_AGE))))
     return c
 
   def update_graphics(self):
     self.image = pygame.Surface([3, 3], flags=pygame.SRCALPHA)
-    self.image.fill(self.get_colour())
+    self.image.fill(self.get_color())
     self.rect = self.image.get_rect(center=self.actual_position.scale(constants.TILE_SIZE))
 
   def update(self, delta):
     self.trail_counter += delta
 
-    self.colour_time += delta
-    while self.colour_time > constants.POWERUP_COLOUR_MODULATION_TIME:
-      self.colour_time -= constants.POWERUP_COLOUR_MODULATION_TIME
+    self.color_time += delta
+    while self.color_time > constants.POWERUP_COLOR_MODULATION_TIME:
+      self.color_time -= constants.POWERUP_COLOR_MODULATION_TIME
     self.age = min(self.age + delta, constants.POWERUP_PARTICLE_AGE)
 
     self.speed = max(0, self.speed - constants.POWERUP_PARTICLE_DECEL * (delta / 1000.0))

@@ -8,7 +8,7 @@ from tank import Tank, Turret, TANK_EXPLODED
 from bullet import BOUNCED, EXPLODED
 from explosion import Explosion, Shockwave
 from game_event import RestartLevelEvent, AdvanceLevelEvent, PlaySoundEvent
-from powerup import ShieldPowerup
+from powerup import ShieldPowerup, RepairPowerup
 from collision import *
 from particle import *
 from shield import Shield
@@ -58,6 +58,7 @@ class TimedLevelRestart:
 class Level:
   def __init__(self, name, game, player_start, player_direction, board, enemies, powerups):
     self.stats = LevelStats()
+    self.computed_stats = {}
     self.name = name
     self.game = game
 
@@ -66,8 +67,11 @@ class Level:
     self.board = board
 
     self.powerups = pygame.sprite.RenderPlain()
-    for (position) in powerups:
-      self.powerups.add(ShieldPowerup(position))
+    for (powerup_type, position) in powerups:
+      if powerup_type == "SHIELD":
+        self.powerups.add(ShieldPowerup(position))
+      elif powerup_type == "REPAIR":
+        self.powerups.add(RepairPowerup(position))
 
     self.shields = pygame.sprite.RenderPlain()
 
@@ -345,41 +349,38 @@ class Level:
     # apply powerups
     for powerup in self.powerups:
       if not powerup.taken:
-        if not self.player.taking and not self.player.shields and tank_collides_with_powerup(self.player, powerup):
+        if powerup.can_take(self.player) and tank_collides_with_powerup(self.player, powerup):
           self.game.register_event(PlaySoundEvent(self, "pickup", 0.2))
           powerup.take(self.player)
-          self.player.taking = True
+          self.player.taking.add(powerup)
 
       if powerup.done:
         self.game.register_event(PlaySoundEvent(self, "powerup", 0.2))
         self.powerups.remove(powerup)
 
-        effect = powerup.effect()(self.player)
-        self.shields.add(effect)
-        self.player.taking = False
-        self.player.shields.append(effect)
+        powerup.do(self, self.player)
+        self.player.taking.remove(powerup)
         for i in xrange(0, constants.POWERUP_PARTICLES):
           angle = i * 2 * math.pi / constants.POWERUP_PARTICLES
           d = Vector(angle)
           p = powerup.position
-          c = powerup.colour_time
+          c = powerup.color_time
           particle = PowerupParticle(p, d, c)
           self.powerup_particles.add(particle)
 
     # add trail particles
     for particle in self.powerup_particles:
       while particle.trail_counter > constants.TRAIL_FREQUENCY:
-        self.trail_particles.add(TrailParticle(particle.actual_position, particle.get_colour()))
+        self.trail_particles.add(TrailParticle(particle.actual_position, particle.get_color()))
         particle.trail_counter -= constants.TRAIL_FREQUENCY
 
     status = self.get_status()
     if not status == self.old_status and self.old_status == LEVEL_ONGOING:
       self.old_status = status
       if status == LEVEL_LOST:
-        self.text = self.game.font_manager.get_font(36).render("You lost... Press 'R' to restart", 1, (200, 200, 200))
-        #self.timers.append(TimedLevelRestart(2000, self))
+        self.text = self.game.font_manager.render("You lost... Press 'R' to restart", 40, constants.DEFAULT_TEXT_COLOR)
       if status == LEVEL_BEATEN:
-        self.text = self.game.font_manager.get_font(36).render("You won!", 1, (200, 200, 200))
+        self.text = self.game.font_manager.render("You won!", 40, constants.DEFAULT_TEXT_COLOR)
         self.timers.append(TimedLevelVictory(2000, self))
 
     to_remove = []
@@ -390,22 +391,32 @@ class Level:
       self.timers.remove(timer)
 
   def write_line(self, line, screen):
-    text = self.game.font_manager.get_font(50).render(line, 1, (200, 200, 200))
+    text = self.game.font_manager.render(line, 50, constants.DEFAULT_TEXT_COLOR)
     text_pos = text.get_rect(centerx = constants.RESOLUTION_X / 2)
     text_pos.top = self.top
     self.top += text.get_height() + 10
     screen.blit(text, text_pos)
 
   def write_stat_line(self, part1, part2, screen):
-    text = self.game.font_manager.get_font(40).render(part1, 1, (200, 200, 200))
+    text = self.game.font_manager.render(part1, 40, constants.DEFAULT_TEXT_COLOR)
     text_pos = text.get_rect(right = constants.RESOLUTION_X / 2)
     text_pos.top = self.top
     screen.blit(text, text_pos)
-    text = self.game.font_manager.get_font(40).render(part2, 1, (200, 200, 200))
+    
+    text = self.game.font_manager.render(part2, 40, constants.DEFAULT_TEXT_COLOR)
     text_pos = text.get_rect(left = 3 * constants.RESOLUTION_X / 4)
     text_pos.top = self.top
-    self.top += text.get_height() + 10
     screen.blit(text, text_pos)
+
+    self.top += text.get_height() + 10
+
+  def get_or_compute(self, stat, getter):
+    if stat in self.computed_stats:
+      value = self.computed_stats[stat]
+    else:
+      value = getter()
+      self.computed_stats[stat] = value
+    return value
 
   def draw(self, screen):
     if self.load_time > 0:
@@ -418,14 +429,18 @@ class Level:
       self.top = 150
       self.write_line("Victory!", screen)
       self.top += 50
-      self.write_stat_line("Fired Shots:", "%d" % self.stats.fired_shots(self.player), screen)
-      self.write_stat_line("Hits:", "%d" % self.stats.hit_shots(self.player), screen)
-      self.write_stat_line("Blocked Shots:", "%d" % self.stats.blocked_shots(self.player), screen)
-      accuracy = int(round(self.stats.accuracy(self.player) * 100))
-      self.write_stat_line("Accuracy:", "%d%%" % accuracy, screen)
-      kill_total = self.stats.kill_total(self.player)
+      fired_shots = self.get_or_compute("fired_shots", lambda: self.stats.fired_shots(self.player))
+      self.write_stat_line("Fired Shots:", "%d" % fired_shots, screen)
+      hit_shots = self.get_or_compute("hit_shots", lambda: self.stats.hit_shots(self.player))
+      self.write_stat_line("Hits:", "%d" % hit_shots, screen)
+      blocked_shots = self.get_or_compute("blocked_shots", lambda: self.stats.blocked_shots(self.player))
+      self.write_stat_line("Blocked Shots:", "%d" % blocked_shots, screen)
+      accuracy = self.get_or_compute("accuracy", lambda: self.stats.accuracy(self.player))
+      accuracy_percentage = int(round(accuracy * 100))
+      self.write_stat_line("Accuracy:", "%d%%" % accuracy_percentage, screen)
+      kill_total = self.get_or_compute("kill_total", lambda: self.stats.kill_total(self.player))
       self.write_stat_line("Kills:", "%d" % kill_total, screen)
-      friendly_fire_kills = self.stats.friendly_fire_kills(self.player)
+      friendly_fire_kills = self.get_or_compute("friendly_fire_kills", lambda: self.stats.friendly_fire_kills(self.player))
       self.write_stat_line("FF Kills:", "%d" % friendly_fire_kills, screen)
       if self.cooldown == 0:
         self.top += 50

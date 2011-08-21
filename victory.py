@@ -10,7 +10,7 @@ class VictoryScreen:
     self.cooldown = max(0, self.cooldown - delta)
 
   def write_line(self, line, screen):
-    text = self.game.font_manager.get_font(36).render(line, 1, (200, 200, 200))
+    text = self.game.font_manager.render(line, 36, constants.DEFAULT_TEXT_COLOR)
     text_pos = text.get_rect(centerx = constants.RESOLUTION_X / 2)
     text_pos.top = self.top
     self.top += text.get_height() + 10

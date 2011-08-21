@@ -2,9 +2,6 @@ import pygame, random
 import constants
 from geometry import Vector, Point, Line
 
-WALL_COLOR = pygame.Color(150, 0, 0, 255)
-GROUND_COLOR = pygame.Color(100, 100, 100, 255)
-
 TILE_RIGHT = 1
 TILE_LEFT = 2
 TILE_BOTTOM = 3
@@ -15,11 +12,10 @@ class Tile(pygame.sprite.Sprite):
     pygame.sprite.Sprite.__init__(self)
     self.image = pygame.Surface([constants.TILE_SIZE, constants.TILE_SIZE], flags=pygame.SRCALPHA)
     if tile_type == 'W':
-      self.image.fill(WALL_COLOR)
-      #self.image.fill(pygame.Color(int(round(random.random() * 255)), int(round(random.random() * 255)), int(round(random.random() * 255)), 255))
+      self.image.fill(constants.TILE_WALL_COLOR)
       self.solid = True
     elif tile_type == 'G':
-      self.image.fill(GROUND_COLOR)
+      self.image.fill(constants.TILE_GROUND_COLOR)
       self.solid = False
     self.rect = self.image.get_rect()
     self.rect.x = constants.TILE_SIZE * x
