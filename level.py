@@ -18,6 +18,10 @@ LEVEL_ONGOING = 1
 LEVEL_BEATEN = 2
 LEVEL_LOST = 3
 
+LEVEL_INTRO = 1
+LEVEL_OUTRO = 2
+LEVEL_MAIN = 3
+
 class TimedLevelAdvance:
   def __init__(self, time, level):
     self.level = level
@@ -125,6 +129,13 @@ class Level:
   def play_sound(self, name, volume=1.0):
     self.game.register_event(PlaySoundEvent(self, name, volume))
 
+  def get_part(self):
+    if self.load_time > 0:
+      return LEVEL_INTRO
+    if self.cooldown > 0:
+      return LEVEL_OUTRO
+    return LEVEL_MAIN
+
   def get_status(self):
     if not self.enemies:
       return LEVEL_BEATEN
@@ -141,9 +152,9 @@ class Level:
     self.cooldown = max(0, self.cooldown - delta)
     
     for event in events:
-      if self.victory and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN) and self.cooldown == 0:
+      if self.get_part() is LEVEL_OUTRO and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN) and self.cooldown == 0:
         self.game.register_event(AdvanceLevelEvent(self))
-      elif event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+      elif self.get_part() is LEVEL_MAIN and event.type == pygame.KEYDOWN and event.key == pygame.K_p:
         self.paused = not self.paused
     
     # if paused, don't update this frame
