@@ -121,7 +121,10 @@ class Level:
     self.cooldown = 0
 
     self.paused = False
-  
+ 
+  def play_sound(self, name, volume=1.0):
+    self.game.register_event(PlaySoundEvent(self, name, volume))
+
   def get_status(self):
     if not self.enemies:
       return LEVEL_BEATEN
@@ -201,7 +204,7 @@ class Level:
     for turret_ai in self.enemy_turret_ai:
       bullet = turret_ai.control(delta)
       if bullet is not None:
-        self.game.register_event(PlaySoundEvent(self, "fire"))
+        self.play_sound("fire")
         self.bullets.add(bullet)
         self.stats.bullet_fired(bullet)
 
@@ -215,7 +218,7 @@ class Level:
       if fire:
         bullet = self.turret.fire()
         if not bullet is None:
-          self.game.register_event(PlaySoundEvent(self, "fire"))
+          self.play_sound("fire")
           self.bullets.add(bullet)
           self.stats.bullet_fired(bullet)
 
@@ -260,11 +263,11 @@ class Level:
       for shield in self.shields:
         if shield.active and bullet_collides_with_shield(bullet, shield):
           # destroy the shield
-          self.game.register_event(PlaySoundEvent(self, "shield_die"))
+          self.play_sound("shield_die")
           shield.die()
           
           # explode the bullet
-          self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
+          self.play_sound("bullet_explode")
           self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
           bullet.remove(self.bullets)
           bullet.die()
@@ -277,13 +280,13 @@ class Level:
         result = self.player.hurt()
         self.stats.bullet_hit(bullet, self.player)
         if result is TANK_EXPLODED:
-          self.game.register_event(PlaySoundEvent(self, "tank_explode"))
+          self.play_sound("tank_explode")
           self.explosions.add(Explosion(self.player.position.x, self.player.position.y, constants.BIG_EXPLOSION_MAX_RATIO, constants.BIG_EXPLOSION_MIN_RATIO))
           self.player.remove(self.tanks)
           self.player.turret.remove(self.turrets)
           self.stats.kill(bullet, self.player)
         else:
-          self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
+          self.play_sound("bullet_explode")
 
         # explode the bullet
         self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
@@ -297,13 +300,13 @@ class Level:
           result = enemy.hurt()
           self.stats.bullet_hit(bullet, enemy)
           if result is TANK_EXPLODED:
-            self.game.register_event(PlaySoundEvent(self, "tank_explode"))
+            self.play_sound("tank_explode")
             self.explosions.add(Explosion(enemy.position.x, enemy.position.y, constants.BIG_EXPLOSION_MAX_RATIO, constants.BIG_EXPLOSION_MIN_RATIO))
             enemy.remove(self.enemies)
             enemy.turret.remove(self.enemy_turrets)
             self.stats.kill(bullet, enemy)
           else:
-            self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
+            self.play_sound("bullet_explode")
 
           # explode the bullet
           self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
@@ -315,7 +318,7 @@ class Level:
       # check for bullet/bullet collisions
       for bullet2 in filter(lambda x: x is not bullet, self.bullets):
         if bullet_collides_with_bullet(bullet, bullet2):
-          self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
+          self.play_sound("bullet_explode")
           self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
           bullet.remove(self.bullets)
           bullet.die()
@@ -328,7 +331,7 @@ class Level:
 
       # check for bullets reaching max range
       if bullet.total_distance > constants.BULLET_MAX_RANGE:
-        self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
+        self.play_sound("bullet_explode")
         self.explosions.add(Explosion(bullet.position.x, bullet.position.y))
         bullet.remove(self.bullets)
         bullet.die()
@@ -337,12 +340,12 @@ class Level:
         results = bullet.bounce(self.solid)
         for (result, position) in results:
           if result == EXPLODED:
-            self.game.register_event(PlaySoundEvent(self, "bullet_explode"))
+            self.play_sound("bullet_explode")
             self.explosions.add(Explosion(bullet.old_position.x, bullet.old_position.y))
             bullet.remove(self.bullets)
             bullet.die()
           elif result == BOUNCED:
-            self.game.register_event(PlaySoundEvent(self, "pong", 0.35))
+            self.play_sound("pong", 0.35)
             self.shockwaves.add(Shockwave(position.x, position.y))
       if bullet.dead: continue
 
@@ -350,12 +353,12 @@ class Level:
     for powerup in self.powerups:
       if not powerup.taken:
         if powerup.can_take(self.player) and tank_collides_with_powerup(self.player, powerup):
-          self.game.register_event(PlaySoundEvent(self, "pickup", 0.2))
+          self.play_sound("pickup", 0.2)
           powerup.take(self.player)
           self.player.taking.add(powerup)
 
       if powerup.done:
-        self.game.register_event(PlaySoundEvent(self, "powerup", 0.2))
+        self.play_sound("powerup", 0.2)
         self.powerups.remove(powerup)
 
         powerup.do(self, self.player)
