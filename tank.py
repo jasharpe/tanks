@@ -1,4 +1,4 @@
-import pygame, math, random
+import pygame, math, random, os
 import constants
 from geometry import Vector, Point, Line, ORIGIN
 from bullet import Bullet
@@ -164,7 +164,7 @@ class Turret(pygame.sprite.Sprite):
   def __init__(self, tank):
     pygame.sprite.Sprite.__init__(self)
 
-    self.original = pygame.transform.smoothscale(pygame.image.load("turret.png").convert_alpha(), (int(round(constants.TURRET_LENGTH_RATIO * constants.TILE_SIZE)), int(round(constants.TURRET_WIDTH_RATIO * constants.TILE_SIZE))))
+    self.original = pygame.transform.smoothscale(pygame.image.load(os.path.join(constants.DATA_DIR, "turret.png")).convert_alpha(), (int(round(constants.TURRET_LENGTH_RATIO * constants.TILE_SIZE)), int(round(constants.TURRET_WIDTH_RATIO * constants.TILE_SIZE))))
     self.image = self.original
     self.rect = self.image.get_rect()
     self.direction = 0.0

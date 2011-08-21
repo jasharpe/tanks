@@ -1,4 +1,4 @@
-import pygame
+import pygame, os
 import constants
 from geometry import Vector, Point, Line
 
@@ -6,7 +6,7 @@ class Shockwave(pygame.sprite.Sprite):
   def __init__(self, x, y):
     super(Shockwave, self).__init__()
     
-    self.original = pygame.image.load("shock.png").convert_alpha()
+    self.original = pygame.image.load(os.path.join(constants.DATA_DIR, "shock.png")).convert_alpha()
     self.image = self.original
     self.age = 0
 
@@ -32,7 +32,7 @@ class Explosion(pygame.sprite.Sprite):
   def __init__(self, x, y, explosion_max_ratio=constants.EXPLOSION_MAX_RATIO, explosion_min_ratio=constants.EXPLOSION_MIN_RATIO):
     super(Explosion, self).__init__()
 
-    self.original = pygame.image.load("explosion.png").convert_alpha()
+    self.original = pygame.image.load(os.path.join(constants.DATA_DIR, "explosion.png")).convert_alpha()
     self.image = self.original
     self.age = 0
 
