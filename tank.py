@@ -2,8 +2,23 @@ import pygame, math, random, os
 import constants
 from geometry import Vector, Point, Line, ORIGIN
 from bullet import Bullet
+import interpolation
 
 TANK_EXPLODED = 1
+
+class SplashTimer:
+  def __init__(self, time, tank):
+    self.tank = tank
+    self.time_left = time
+
+  def update(self, delta):
+    self.time_left -= delta
+    self.time_left = max(0, self.time_left)
+    if self.time_left == 0:
+      self.tank.splash = False
+      self.splash_color_time = 0
+      self.tank.update_image()
+    return self.time_left == 0
 
 class Tank(pygame.sprite.Sprite):
   def __init__(self, position, direction, color=constants.TANK_COLOR):
@@ -28,8 +43,12 @@ class Tank(pygame.sprite.Sprite):
     self.dead = False
 
     self.taking = set()
+    self.splash = False
+    self.splash_color_time = 0
 
     self.shields = []
+
+    self.timers = []
 
     self.update_image()
     self.update_graphics()
@@ -39,7 +58,13 @@ class Tank(pygame.sprite.Sprite):
     self.original = pygame.Surface([size, size], flags=pygame.SRCALPHA)
     diff = 20 * (constants.TANK_HEALTH - self.health)
     new_color = pygame.Color(max(0, self.color.r - diff), max(0, self.color.g - diff), max(0, self.color.b - diff))
-    self.original.fill(new_color)
+    if self.splash:
+      splash_color = pygame.Color(max(0, constants.SPLASH_TANK_COLOR.r - diff), max(0,constants.SPLASH_TANK_COLOR.g - diff), max(0, constants.SPLASH_TANK_COLOR.b - diff))
+      t = interpolation.quadratic_bi(self.splash_color_time % constants.SPLASH_TANK_COLOR_PERIOD, constants.SPLASH_TANK_COLOR_PERIOD)
+      final_color = interpolation.interpolate_colors(t, splash_color, new_color)
+    else:
+      final_color = new_color
+    self.original.fill(final_color)
 
   def hurt(self):
     if constants.INFINITE_HEALTH:
@@ -53,12 +78,18 @@ class Tank(pygame.sprite.Sprite):
       return TANK_EXPLODED
     else:
       self.update_image()
-      self.update_graphics()
 
   def heal(self):
     self.health = min(self.health + 1, constants.TANK_HEALTH)
     self.update_image()
-    self.update_graphics()
+
+  def has_splash(self):
+    return self.splash
+
+  def activate_splash(self):
+    self.splash = True
+    self.splash_color_time = 0
+    self.timers.append(SplashTimer(constants.SPLASH_TANK_DURATION, self))
 
   # this returns the tank to its position before the last update()
   # call. It is important that this be idempotent.
@@ -72,7 +103,15 @@ class Tank(pygame.sprite.Sprite):
     self.cooldown -= delta
     self.cooldown = max(self.cooldown, 0)
     self.old_position = self.position
-    self.position = self.position.translate(((delta / 1000.0) * self.speed) * Vector(math.cos(self.direction), math.sin(self.direction)).normalize())
+    self.position = self.position.translate(
+        ((delta / 1000.0) * self.speed) *
+        Vector(math.cos(self.direction), math.sin(self.direction)).normalize())
+    if self.splash:
+      self.splash_color_time += delta
+      self.update_image()
+    for timer in self.timers:
+      if timer.update(delta):
+        self.timers.remove(timer)
     self.update_graphics()
 
   def update_graphics(self):
@@ -179,7 +218,7 @@ class Turret(pygame.sprite.Sprite):
       origin = self.tank.position.translate(Vector(constants.TURRET_LENGTH_RATIO / 2, 0)).rotate_about(self.direction + self.tank.direction, self.tank.position)
       self.tank.bullets += 1
       self.tank.cooldown = constants.TANK_COOLDOWN
-      return Bullet(origin.x, origin.y, self.direction + self.tank.direction, self.tank)
+      return Bullet(origin, self.direction + self.tank.direction, self.tank, self.tank.splash)
 
   # turn towards target point
   def turn(self, delta, target):

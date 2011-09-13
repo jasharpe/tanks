@@ -3,14 +3,14 @@ import constants
 from geometry import Vector, Point, Line
 
 class Shockwave(pygame.sprite.Sprite):
-  def __init__(self, x, y):
+  def __init__(self, position):
     super(Shockwave, self).__init__()
     
     self.original = pygame.image.load(os.path.join(constants.DATA_DIR, "shock.png")).convert_alpha()
     self.image = self.original
     self.age = 0
 
-    self.position = Point(x, y)
+    self.position = position
     self.update_graphics()
 
   def update(self, delta):
@@ -29,8 +29,8 @@ class Shockwave(pygame.sprite.Sprite):
     self.rect = self.image.get_rect(center=(constants.TILE_SIZE * self.position.x, constants.TILE_SIZE * self.position.y))
 
 class Explosion(pygame.sprite.Sprite):
-  def __init__(self, x, y, explosion_max_ratio=constants.EXPLOSION_MAX_RATIO, explosion_min_ratio=constants.EXPLOSION_MIN_RATIO):
-    super(Explosion, self).__init__()
+  def __init__(self, position, explosion_max_ratio=constants.EXPLOSION_MAX_RATIO, explosion_min_ratio=constants.EXPLOSION_MIN_RATIO, damages=False):
+    pygame.sprite.Sprite.__init__(self)
 
     self.original = pygame.image.load(os.path.join(constants.DATA_DIR, "explosion.png")).convert_alpha()
     self.image = self.original
@@ -39,7 +39,11 @@ class Explosion(pygame.sprite.Sprite):
     self.explosion_max_ratio = explosion_max_ratio
     self.explosion_min_ratio = explosion_min_ratio
 
-    self.position = Point(x, y)
+    self.damages = damages
+    # ensure that each tank can only be damaged once by this explosion
+    self.damaged = set()
+
+    self.position = position
     self.update_graphics()
 
   def update(self, delta):
@@ -58,3 +62,7 @@ class Explosion(pygame.sprite.Sprite):
     self.image = pygame.transform.smoothscale(self.original, (radius, radius))
     self.image.set_alpha(255 * a)
     self.rect = self.image.get_rect(center=(constants.TILE_SIZE * self.position.x, constants.TILE_SIZE * self.position.y))
+
+class BigExplosion(Explosion):
+  def __init__(self, position, damages=False):
+    Explosion.__init__(self, position, constants.BIG_EXPLOSION_MAX_RATIO, constants.BIG_EXPLOSION_MIN_RATIO, damages)

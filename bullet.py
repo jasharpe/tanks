@@ -1,6 +1,7 @@
 import pygame, math
 import constants
 from geometry import Vector, Point, Line
+from explosion import BigExplosion, Explosion, Shockwave
 
 BOUNCED = 1
 EXPLODED = 2
@@ -9,27 +10,39 @@ class Bullet(pygame.sprite.Sprite):
   # position holds xy coordinates of the bullet as a Point
   # direction contains an angle in radians from the positive
   # x axis.
-  def __init__(self, x, y, direction, owner):
+  def __init__(self, p, direction, owner, splash=False):
     super(Bullet, self).__init__()
     
-    self.original = pygame.Surface([constants.TILE_SIZE * constants.BULLET_WIDTH_RATIO, constants.TILE_SIZE * constants.BULLET_HEIGHT_RATIO], flags=pygame.SRCALPHA)
-
-    self.original.fill(constants.BULLET_COLOR)
-    self.image = self.original
-    self.rect = self.image.get_rect()
-
-    self.position = Point(x, y)
-    self.old_position = self.position
+    self.position = p
     self.direction = direction
+    self.owner = owner
+    self.splash = splash
+
+    if not self.splash:
+      self.original = pygame.Surface([constants.TILE_SIZE * constants.BULLET_WIDTH_RATIO, constants.TILE_SIZE * constants.BULLET_HEIGHT_RATIO], flags=pygame.SRCALPHA)
+      self.original.fill(constants.BULLET_COLOR)
+    else:
+      size = int(round(constants.BULLET_WIDTH_RATIO * constants.TILE_SIZE))
+      self.original = pygame.Surface([size, size], flags=pygame.SRCALPHA)
+      self.original.fill(constants.COLOR_TRANSPARENT)
+      image_center = (self.original.get_width() / 2, self.original.get_height() / 2)
+      pygame.draw.circle(self.original, constants.BULLET_COLOR, image_center, int(round(self.original.get_width() / 2)))
+      
+    self.old_position = self.position
     self.reset_vec()
     self.bounces = 0
 
     self.total_distance = 0.0
-    self.owner = owner
     self.dead = False
 
     self.travelled = Line(self.position, self.position)
     self.update_graphics()
+
+  def get_explosion(self):
+    if self.splash:
+      return BigExplosion(self.position, True)
+    else:
+      return Explosion(self.position)
 
   def die(self):
     self.owner.bullets -= 1
@@ -73,7 +86,7 @@ class Bullet(pygame.sprite.Sprite):
               reflectors.append((p, tile_side))
       
       if len(reflectors) == 1:
-        if self.has_bounces(): 
+        if self.has_bounces() and not self.splash:
           (p, wall) = reflectors[0]
           self.position = wall.reflect(self.position)
           self.direction = (self.position - p).angle()

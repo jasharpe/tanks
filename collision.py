@@ -85,6 +85,6 @@ def sprite_collide_exact(sprite1, sprite2):
 
   return False
 
-def tank_collides_with_powerup(tank, powerup):
-  return pygame.sprite.collide_rect(tank, powerup) and \
-         sprite_collide_exact(tank, powerup)
+def sprite_collide(sprite1, sprite2):
+  return pygame.sprite.collide_rect(sprite1, sprite2) and \
+         sprite_collide_exact(sprite1, sprite2)

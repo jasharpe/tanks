@@ -22,8 +22,8 @@ def quadratic_bi(val, max, min=0):
 
 def interpolate_colors(t, c1, c2):
   return pygame.Color(
-      int(round(c1.r * t + c2.r * (1 - t))),
-      int(round(c1.g * t + c2.g * (1 - t))),
-      int(round(c1.b * t + c2.b * (1 - t))),
-      int(round(c1.a * t + c2.a * (1 - t)))
+      max(0, min(255, int(round(c1.r * t + c2.r * (1 - t))))),
+      max(0, min(255, int(round(c1.g * t + c2.g * (1 - t))))),
+      max(0, min(255, int(round(c1.b * t + c2.b * (1 - t))))),
+      max(0, min(255, int(round(c1.a * t + c2.a * (1 - t)))))
   )

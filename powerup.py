@@ -60,11 +60,10 @@ class ShieldPowerup(Powerup):
   def can_take(self, tank):
     if tank.shields:
       return False
-    can = True
     for powerup in tank.taking:
       if type(powerup) is type(self):
-        can = False
-    return can
+        return False
+    return True
 
 class RepairPowerup(Powerup):
   def do(self, level, tank):
@@ -73,8 +72,19 @@ class RepairPowerup(Powerup):
   def can_take(self, tank):
     if tank.health == constants.TANK_HEALTH:
       return False
-    can = True
     for powerup in tank.taking:
       if type(powerup) is type(self):
-        can = False
-    return can
+        return False
+    return True
+
+class SplashPowerup(Powerup):
+  def do(self, level, tank):
+    tank.activate_splash()
+
+  def can_take(self, tank):
+    if tank.has_splash():
+      return False
+    for powerup in tank.taking:
+      if type(powerup) is type(self):
+        return False
+    return True

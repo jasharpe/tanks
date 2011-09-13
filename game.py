@@ -102,8 +102,8 @@ class Game:
 
     for event in pygame_events:
       if self.stage is STAGE_LEVEL:
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-          self.level = load_level(self.current_level, self)
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_r and not self.level.is_finished():
+          self.restart_level()
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
           self.enter_menu()
       elif self.stage is STAGE_VICTORY:
