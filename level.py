@@ -258,7 +258,10 @@ class Level:
       for expirable in list(expirables):
         if expirable.expired():
           expirables.remove(expirable)
-          expirable.expire()
+          try:
+            expirable.expire()
+          except AttributeError:
+            pass
 
     # do bullet collision detection
     # bounce off walls once, then explode on second contact
