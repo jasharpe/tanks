@@ -1,4 +1,5 @@
 import pygame, os, itertools
+from pygame.sprite import Group
 import constants
 from ai import *
 from board import Board
@@ -70,30 +71,23 @@ class Level:
     self.player_direction = player_direction
     self.board = board
 
-    self.powerups = pygame.sprite.RenderPlain()
-    for (powerup_type, position) in powerups:
-      if powerup_type == "SHIELD":
-        self.powerups.add(ShieldPowerup(position))
-      elif powerup_type == "REPAIR":
-        self.powerups.add(RepairPowerup(position))
-      elif powerup_type == "SPLASH":
-        self.powerups.add(SplashPowerup(position))
+    self.powerups = Group(powerups)
 
-    self.shields = pygame.sprite.RenderPlain()
+    self.shields = Group()
 
-    self.powerup_particles = pygame.sprite.RenderPlain()
-    self.trail_particles = pygame.sprite.RenderPlain()
+    self.powerup_particles = Group()
+    self.trail_particles = Group()
 
-    self.tanks = pygame.sprite.RenderPlain()
-    self.turrets = pygame.sprite.RenderPlain()
+    self.tanks = Group()
+    self.turrets = Group()
 
     self.player = Tank(self.player_start, self.player_direction)
     self.tanks.add(self.player)
     self.turret = Turret(self.player)
     self.turrets.add(self.turret)
 
-    self.enemies = pygame.sprite.RenderPlain()
-    self.enemy_turrets = pygame.sprite.RenderPlain()
+    self.enemies = Group()
+    self.enemy_turrets = Group()
     self.enemy_ai = []
     self.enemy_turret_ai = []
     for (p, d, waypoint_type, waypoints) in enemies:
@@ -104,19 +98,19 @@ class Level:
       self.enemy_turrets.add(enemy_turret)
       self.enemy_turret_ai.append(TurretAI(enemy_turret, self))
 
-    self.tiles = pygame.sprite.RenderPlain()
+    self.tiles = Group()
     for tile in self.board:
       self.tiles.add(tile)
-    self.solid = pygame.sprite.RenderPlain()
-    self.non_solid = pygame.sprite.RenderPlain()
+    self.solid = Group()
+    self.non_solid = Group()
     for tile in self.tiles:
       if tile.solid:
         self.solid.add(tile)
       else:
         self.non_solid.add(tile)
-    self.bullets = pygame.sprite.RenderPlain()
-    self.shockwaves = pygame.sprite.RenderPlain()
-    self.explosions = pygame.sprite.RenderPlain()
+    self.bullets = Group()
+    self.shockwaves = Group()
+    self.explosions = Group()
     self.old_status = LEVEL_ONGOING
     self.text = None
 
@@ -200,20 +194,9 @@ class Level:
       else:
         self.player.neutral(delta)
 
-      self.tanks.update(delta)
+      self.player.update(delta)
       if tank_collides_with_tile(self.player, self.solid):
         self.player.revert()
-      # this is fancy and kind of nice, but hard! and looks jittery
-      #intersects = self.player.collides_with_tile(self.solid)
-      #if intersects:
-      #  for (side, tile_side, p) in intersects:
-      #    self.player.push_out(delta, side, tile_side, p)
-      #    if not self.player.collides_with_tile(self.solid):
-      #      break
-      #  if self.player.collides_with_tile(self.solid):
-      #    self.player.revert()
-      #  else:
-      #    self.player.speed = min(0.2, self.player.speed)
 
     # AI control of enemy tanks
     self.enemy_ai = filter(lambda x: x.tank in self.enemies, self.enemy_ai)

@@ -4,6 +4,13 @@ from geometry import *
 from tile import Tile
 from level import Level
 import re
+from powerup import ShieldPowerup, RepairPowerup, SplashPowerup
+
+powerup_type_map = {
+    "SHIELD" : ShieldPowerup,
+    "REPAIR" : RepairPowerup,
+    "SPLASH" : SplashPowerup
+}
 
 def load_level(number, game):
   level_file = open(os.path.join(constants.DATA_DIR, "level%d.dat" % (number)), "r")
@@ -73,7 +80,7 @@ def load_level(number, game):
     powerup_info = process(line)
     powerup_type = powerup_info[0]
     position = Point(int(powerup_info[1]) + 0.5, int(powerup_info[2]) + 0.5)
-    powerups.append((powerup_type, position))
+    powerups.append(powerup_type_map[powerup_type](position))
 
   # tiles
   board = Board(width, height)
