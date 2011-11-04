@@ -248,23 +248,17 @@ class Level:
     self.trail_particles.update(delta)
     self.shields.update(delta)
 
-    for expirables in [self.powerup_particles, self.trail_particles]:
+    for expirables in [
+            self.powerup_particles,
+            self.trail_particles,
+            self.player.shields,
+            self.shockwaves,
+            self.explosions,
+        ]:
       for expirable in list(expirables):
         if expirable.expired():
           expirables.remove(expirable)
-
-    for shield in self.player.shields:
-      if shield.to_remove:
-        shield.remove(self.shields)
-        self.player.shields.remove(shield)
-
-    for shockwave in self.shockwaves:
-      if shockwave.age > constants.SHOCKWAVE_DURATION:
-        shockwave.remove(self.shockwaves)
-
-    for explosion in self.explosions:
-      if explosion.age > constants.EXPLOSION_DURATION:
-        explosion.remove(self.explosions)
+          expirable.expire()
 
     # do bullet collision detection
     # bounce off walls once, then explode on second contact
@@ -374,12 +368,9 @@ class Level:
         self.text = self.game.font_manager.render("You won!", 40, constants.DEFAULT_TEXT_COLOR)
         self.timers.append(TimedLevelVictory(2000, self))
 
-    to_remove = []
-    for timer in self.timers:
+    for timer in list(self.timers):
       if timer.update(delta):
-        to_remove.append(timer)
-    for timer in to_remove:
-      self.timers.remove(timer)
+        self.timers.remove(timer)
 
   def write_line(self, line, screen):
     text = self.game.font_manager.render(line, 50, constants.DEFAULT_TEXT_COLOR)

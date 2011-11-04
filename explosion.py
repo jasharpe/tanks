@@ -18,6 +18,9 @@ class Shockwave(pygame.sprite.Sprite):
     if self.age < constants.SHOCKWAVE_DURATION:
       self.update_graphics()
 
+  def expired(self):
+    return self.age > constants.SHOCKWAVE_DURATION
+
   def update_graphics(self):
     # interpolate from 0 to 1
     t = float(self.age) / constants.SHOCKWAVE_DURATION
@@ -45,6 +48,9 @@ class Explosion(pygame.sprite.Sprite):
 
     self.position = position
     self.update_graphics()
+
+  def expired(self):
+    return self.age > constants.EXPLOSION_DURATION
 
   def update(self, delta):
     self.age += delta

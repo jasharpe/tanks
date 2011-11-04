@@ -28,14 +28,18 @@ class Shield(pygame.sprite.Sprite):
 
     self.update_graphics()
 
+  def expired(self):
+    return self.to_remove
+
+  def expire(self):
+    self.tank.shields.remove(self)
+
   def die(self):
     self.active = False
     self.dead = True
 
   def update_graphics(self):
     t = interpolation.quadratic_bi(self.pulse_time, constants.SHIELD_PULSE_PERIOD)
-    # pulsating (breathing)
-    #size = int(round(interpolation.reverse_linear(t, 1.1, 1.0) * interpolation.linear(self.growth_time, constants.SHIELD_GROWTH_TIME) * constants.TILE_SIZE * constants.SHIELD_RADIUS_RATIO * 2))
     size = int(round((1 - interpolation.linear(self.dead_time, constants.SHIELD_DEATH_TIME)) * interpolation.linear(self.growth_time, constants.SHIELD_GROWTH_TIME) * constants.TILE_SIZE * constants.SHIELD_RADIUS_RATIO * 2))
     self.image = pygame.Surface([size, size], flags=pygame.SRCALPHA)
     self.image.fill(constants.COLOR_TRANSPARENT)
