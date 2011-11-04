@@ -3,9 +3,16 @@ from geometry import *
 from interpolation import *
 import utils
 
-class TrailParticle(pygame.sprite.Sprite):
-  def __init__(self, position, color):
+class Particle(pygame.sprite.Sprite):
+  def __init__(self):
     pygame.sprite.Sprite.__init__(self)
+
+  def expired(self):
+    return self.age >= self.max_age
+
+class TrailParticle(Particle):
+  def __init__(self, position, color):
+    Particle.__init__(self)
 
     self.position = position
     self.color = color
@@ -26,9 +33,9 @@ class TrailParticle(pygame.sprite.Sprite):
     self.update_graphics()
 
 # these are shot off when a powerup is taken and disappears
-class PowerupParticle(pygame.sprite.Sprite):
+class PowerupParticle(Particle):
   def __init__(self, position, direction, color_time):
-    pygame.sprite.Sprite.__init__(self)
+    Particle.__init__(self)
 
     self.position = position
     self.actual_position = position

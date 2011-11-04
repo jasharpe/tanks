@@ -248,19 +248,15 @@ class Level:
     self.trail_particles.update(delta)
     self.shields.update(delta)
 
-    for particle in self.powerup_particles:
-      if particle.age >= particle.max_age:
-        particle.remove(self.powerup_particles)
-
-    for particle in self.trail_particles:
-      if particle.age >= particle.max_age:
-        particle.remove(self.trail_particles)
+    for expirables in [self.powerup_particles, self.trail_particles]:
+      for expirable in list(expirables):
+        if expirable.expired():
+          expirables.remove(expirable)
 
     for shield in self.player.shields:
       if shield.to_remove:
         shield.remove(self.shields)
         self.player.shields.remove(shield)
-
 
     for shockwave in self.shockwaves:
       if shockwave.age > constants.SHOCKWAVE_DURATION:
