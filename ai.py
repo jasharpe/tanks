@@ -10,6 +10,9 @@ class TurretAI:
 
     self.cooldown = TIME_BETWEEN_FIRING
 
+  def expired(self):
+    return not self.turret in self.level.enemy_turrets
+
   def control(self, delta):
     # TODO: make the turret not fire if the bullet is going to rebound
     # right back into the tank!
@@ -20,7 +23,7 @@ class TurretAI:
 
       if self.cooldown == 0:
         self.cooldown = (random.random() + 0.5) * TIME_BETWEEN_FIRING
-        return self.turret.fire()
+        return { 'turret' : self.turret }
       else:
         self.cooldown -= delta
         self.cooldown = max(0, self.cooldown)
@@ -36,6 +39,9 @@ class TankAI:
 
     self.next_waypoint = 0
     
+  def expired(self):
+    return not self.tank in self.level.enemies
+
   def update_waypoint(self):
     if (self.tank.position - self.waypoints[self.next_waypoint]).length() < 0.01:
       self.next_waypoint = (self.next_waypoint + 1) % len(self.waypoints)

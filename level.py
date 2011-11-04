@@ -14,6 +14,7 @@ from collision import *
 from particle import *
 from shield import Shield
 from level_stats import LevelStats
+from player import PlayerController
 
 LEVEL_ONGOING = 1
 LEVEL_BEATEN = 2
@@ -78,13 +79,14 @@ class Level:
     self.powerup_particles = Group()
     self.trail_particles = Group()
 
-    self.tanks = Group()
-    self.turrets = Group()
+    self.player_tanks = Group()
+    self.player_turrets = Group()
 
     self.player = Tank(self.player_start, self.player_direction)
-    self.tanks.add(self.player)
-    self.turret = Turret(self.player)
-    self.turrets.add(self.turret)
+    self.player_tanks.add(self.player)
+    self.player_turret = Turret(self.player)
+    self.player_turrets.add(self.player_turret)
+    self.player_controller = PlayerController(self.player, self.player_turret)
 
     self.enemies = Group()
     self.enemy_turrets = Group()
@@ -122,9 +124,13 @@ class Level:
 
     self.paused = False
 
+    # these are updated IN ORDER
     self.updateable_groups = [
-        self.enemy_turrets,
-        self.turrets,
+        #self.enemies,
+        #self.enemy_turrets,
+        # player_tanks must go before player_turrets
+        #self.player_tanks,
+        #self.player_turrets,
         self.bullets,
         self.shockwaves,
         self.explosions,
@@ -140,6 +146,10 @@ class Level:
         self.player.shields,
         self.shockwaves,
         self.explosions,
+        self.enemy_ai,
+        self.enemy_turret_ai,
+        self.player_tanks,
+        self.player_turrets
     ]
         
  
@@ -174,6 +184,11 @@ class Level:
             expirable.expire()
           except AttributeError:
             pass
+
+  def bullet_fire(self, bullet):
+    self.play_sound("fire")
+    self.bullets.add(bullet)
+    self.stats.bullet_fired(bullet)
 
   def bullet_explode(self, bullet):
     self.explosions.add(bullet.get_explosion())
@@ -210,34 +225,26 @@ class Level:
     if self.paused:
       return
 
-    fire = False
-    for event in events:
-      if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-        fire = True
+    self.expire_expirables()
 
-    if not self.player.dead:
-      if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
-        self.player.turn_left(delta)
-      elif pressed[pygame.K_RIGHT] or pressed[pygame.K_d]:
-        self.player.turn_right(delta)
-      if pressed[pygame.K_UP] or pressed[pygame.K_w]:
-        self.player.accelerate(delta)
-      elif pressed[pygame.K_DOWN] or pressed[pygame.K_s]:
-        self.player.decelerate(delta)
-      else:
-        self.player.neutral(delta)
+    bullet_requests = []
+    bullet_request = self.player_controller.control(events, pressed, mouse, delta)
+    if bullet_request is not None:
+      bullet_requests.append(bullet_request)
 
-      self.player.update(delta)
-      if tank_collides_with_tile(self.player, self.solid):
-        self.player.revert()
+    self.player_turrets.update(delta)
+    self.player_tanks.update(delta)
+    for player in self.player_tanks:
+      if tank_collides_with_tile(player, self.solid):
+        player.revert()
 
     # AI control of enemy tanks
-    self.enemy_ai = filter(lambda x: x.tank in self.enemies, self.enemy_ai)
     for enemy_ai in self.enemy_ai:
       enemy_ai.control(delta)
 
     # update enemies
     self.enemies.update(delta)
+    self.enemy_turrets.update(delta)
     for enemy in self.enemies:
       if tank_collides_with_tile(enemy, self.solid):
         enemy.revert()
@@ -249,27 +256,16 @@ class Level:
         enemy.revert()
 
     # turret AI
-    self.enemy_turret_ai = filter(lambda x: x.turret in self.enemy_turrets, self.enemy_turret_ai)
     for turret_ai in self.enemy_turret_ai:
-      bullet = turret_ai.control(delta)
+      bullet_request = turret_ai.control(delta)
+      if bullet_request is not None:
+        bullet_requests.append(bullet_request)
+
+    # actually fire bullets, since now final locations of turrets are known
+    for bullet_request in bullet_requests:
+      bullet = bullet_request['turret'].fire()
       if bullet is not None:
-        self.play_sound("fire")
-        self.bullets.add(bullet)
-        self.stats.bullet_fired(bullet)
-
-    # turret control
-    # mouse position
-    m_p = mouse
-    if not self.player.dead:
-      self.turret.turn(delta, Point(float(m_p[0]) / constants.TILE_SIZE, float(m_p[1]) / constants.TILE_SIZE))
-
-      # fire!
-      if fire:
-        bullet = self.turret.fire()
-        if not bullet is None:
-          self.play_sound("fire")
-          self.bullets.add(bullet)
-          self.stats.bullet_fired(bullet)
+        self.bullet_fire(bullet)
 
     for group in self.updateable_groups:
       group.update(delta)
@@ -295,7 +291,7 @@ class Level:
           self.stats.bullet_hit(bullet, shield.tank)
       if bullet.dead: continue
 
-      for tank in itertools.chain(self.enemies, [self.player]):
+      for tank in itertools.chain(self.enemies, self.player_tanks):
         if not tank.dead and bullet_collides_with_tank(bullet, tank): 
           # do something to the player
           self.stats.bullet_hit(bullet, tank)
@@ -337,7 +333,7 @@ class Level:
 
     # check for collisions of splash explosions with tanks
     for explosion in self.explosions:
-      for tank in itertools.chain(self.enemies, [self.player]):
+      for tank in itertools.chain(self.enemies, self.player_tanks):
         if explosion.damages and not tank in explosion.damaged and sprite_collide(tank, explosion):
           #self.stats.bullet_hit(explosion.bullet, tank)
           if self.tank_damage(tank):
@@ -381,7 +377,7 @@ class Level:
       if status == LEVEL_LOST:
         self.text = self.game.font_manager.render("You lost... Press 'R' to restart", 40, constants.DEFAULT_TEXT_COLOR)
       if status == LEVEL_BEATEN:
-        self.text = self.game.font_manager.render("You won!", 40, constants.DEFAULT_TEXT_COLOR)
+        self.text = self.game.font_manager.render("Victory!", 40, constants.DEFAULT_TEXT_COLOR)
         self.timers.append(TimedLevelVictory(2000, self))
 
     for timer in list(self.timers):
@@ -446,8 +442,8 @@ class Level:
       return
 
     self.non_solid.draw(screen)
-    self.tanks.draw(screen)
-    self.turrets.draw(screen)
+    self.player_tanks.draw(screen)
+    self.player_turrets.draw(screen)
     self.enemies.draw(screen)
     self.enemy_turrets.draw(screen)
     self.shockwaves.draw(screen)

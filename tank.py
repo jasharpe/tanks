@@ -66,6 +66,9 @@ class Tank(pygame.sprite.Sprite):
       final_color = new_color
     self.original.fill(final_color)
 
+  def expired(self):
+    return self.dead
+
   def hurt(self):
     if constants.INFINITE_HEALTH:
       return
@@ -98,6 +101,7 @@ class Tank(pygame.sprite.Sprite):
     self.direction = self.old_direction
     self.speed = 0.0
     self.update_graphics()
+    self.turret.revert()
 
   def update(self, delta):
     self.cooldown -= delta
@@ -167,38 +171,6 @@ class Tank(pygame.sprite.Sprite):
     right = Line(back_right, front_right)
     return [front, back, left, right]
 
-  # not currently used
-  def push_out(self, delta, side, tile_side, p):
-    def cross(A, B, C):
-      AB = B - A
-      AC = C - A
-      return AB.x * AC.y - AB.y * AC.x
-
-    tile_normal = tile_side.normal()
-    cont = False
-    for point in [side.p1, side.p2]:
-      p2 = point.translate(tile_normal)
-      i = Line(point, p2).intersect(tile_side)
-      if (point - i).length() < 0.06:
-        cont = True
-        break
-    if not cont:
-      return
-    
-    side1 = side
-    side2 = tile_side
-
-    adjustments = []
-    normal = side2.normal()
-    for point in [side1.p1, side1.p2]:
-      p2 = point.translate(normal)      
-      line = Line(point, p2)
-      i = side2.intersect(line)
-      if (point - p).dot(normal) < 0:
-        adjustments.append((i - point).length())
-    adjustment = max(adjustments) * 1.00001
-    self.position = self.position.translate(adjustment * normal)
-
 class Turret(pygame.sprite.Sprite):
   def __init__(self, tank):
     pygame.sprite.Sprite.__init__(self)
@@ -210,6 +182,12 @@ class Turret(pygame.sprite.Sprite):
 
     self.tank = tank
     tank.turret = self
+
+  def expired(self):
+    return self.tank.dead
+
+  def revert(self):
+    self.update_graphics()
 
   # creates and returns a Bullet starting at the end of the Turret's
   # barrel and going in the direction of the barrel.
@@ -246,5 +224,8 @@ class Turret(pygame.sprite.Sprite):
       self.direction -= min(2 * math.pi * delta / (constants.TURRET_TURNING_SPEED * 1000.0), -difference)
 
   def update(self, delta):
+    self.update_graphics()
+
+  def update_graphics(self):
     self.image = pygame.transform.rotate(self.original, -(self.direction + self.tank.direction) * 180.0 / math.pi)
     self.rect = self.image.get_rect(center=self.tank.rect.center)
