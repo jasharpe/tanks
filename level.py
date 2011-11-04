@@ -121,6 +121,27 @@ class Level:
     self.cooldown = -1
 
     self.paused = False
+
+    self.updateable_groups = [
+        self.enemy_turrets,
+        self.turrets,
+        self.bullets,
+        self.shockwaves,
+        self.explosions,
+        self.powerups,
+        self.powerup_particles,
+        self.trail_particles,
+        self.shields,
+    ]
+
+    self.expirable_groups = [
+        self.powerup_particles,
+        self.trail_particles,
+        self.player.shields,
+        self.shockwaves,
+        self.explosions,
+    ]
+        
  
   def play_sound(self, name, volume=1.0):
     self.game.register_event(PlaySoundEvent(self, name, volume))
@@ -141,6 +162,18 @@ class Level:
 
   def is_finished(self):
     return self.get_part() is LEVEL_OUTRO
+
+  def expire_expirables(self):
+    for expirables in self.expirable_groups:
+      for expirable in list(expirables):
+        if expirable.expired():
+          expirables.remove(expirable)
+          # Some expirables need to do something on expiration.
+          # Let them do that here.
+          try:
+            expirable.expire()
+          except AttributeError:
+            pass
 
   def bullet_explode(self, bullet):
     self.explosions.add(bullet.get_explosion())
@@ -238,30 +271,10 @@ class Level:
           self.bullets.add(bullet)
           self.stats.bullet_fired(bullet)
 
-    self.enemy_turrets.update(delta)
-    self.turrets.update(delta)
-    self.bullets.update(delta)
-    self.shockwaves.update(delta)
-    self.explosions.update(delta)
-    self.powerups.update(delta)
-    self.powerup_particles.update(delta)
-    self.trail_particles.update(delta)
-    self.shields.update(delta)
+    for group in self.updateable_groups:
+      group.update(delta)
 
-    for expirables in [
-            self.powerup_particles,
-            self.trail_particles,
-            self.player.shields,
-            self.shockwaves,
-            self.explosions,
-        ]:
-      for expirable in list(expirables):
-        if expirable.expired():
-          expirables.remove(expirable)
-          try:
-            expirable.expire()
-          except AttributeError:
-            pass
+    self.expire_expirables()
 
     # do bullet collision detection
     # bounce off walls once, then explode on second contact
