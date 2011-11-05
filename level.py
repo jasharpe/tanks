@@ -86,7 +86,7 @@ class Level:
     self.player_tanks.add(self.player)
     self.player_turret = Turret(self.player)
     self.player_turrets.add(self.player_turret)
-    self.player_controller = PlayerController(self.player, self.player_turret)
+    self.player_controllers = [PlayerController(self.player, self.player_turret)]
 
     self.enemies = Group()
     self.enemy_turrets = Group()
@@ -126,11 +126,11 @@ class Level:
 
     # these are updated IN ORDER
     self.updateable_groups = [
-        #self.enemies,
-        #self.enemy_turrets,
-        # player_tanks must go before player_turrets
-        #self.player_tanks,
-        #self.player_turrets,
+        # tanks must be before turrets!
+        self.enemies,
+        self.enemy_turrets,
+        self.player_tanks,
+        self.player_turrets,
         self.bullets,
         self.shockwaves,
         self.explosions,
@@ -143,7 +143,7 @@ class Level:
     self.expirable_groups = [
         self.powerup_particles,
         self.trail_particles,
-        self.player.shields,
+        self.shields,
         self.shockwaves,
         self.explosions,
         self.enemy_ai,
@@ -172,6 +172,98 @@ class Level:
 
   def is_finished(self):
     return self.get_part() is LEVEL_OUTRO
+
+  def process_input(self, events, pressed, mouse, delta):
+    bullet_requests = []
+
+    for player_controller in self.player_controllers:
+      bullet_request = player_controller.control(events, pressed, mouse, delta)
+      if bullet_request is not None:
+        bullet_requests.append(bullet_request)
+    
+    return bullet_requests
+
+  def process_ai(self, delta):
+    bullet_requests = []
+
+    # AI control of enemy tanks
+    for enemy_ai in self.enemy_ai:
+      enemy_ai.control(delta)
+
+    # turret AI
+    for turret_ai in self.enemy_turret_ai:
+      bullet_request = turret_ai.control(delta)
+      if bullet_request is not None:
+        bullet_requests.append(bullet_request)
+    
+    return bullet_requests
+
+  def process_firings(self, bullet_requests):
+    for bullet_request in bullet_requests:
+      bullet = bullet_request['turret'].fire()
+      if bullet is not None:
+        self.bullet_fire(bullet)
+
+  def update_timers(self, delta):
+    for timer in list(self.timers):
+      if timer.update(delta):
+        self.timers.remove(timer)
+
+  def check_for_status_change(self):
+    status = self.get_status()
+    if not status == self.old_status and self.old_status == LEVEL_ONGOING:
+      self.old_status = status
+      if status == LEVEL_LOST:
+        self.text = self.game.font_manager.render("You lost... Press 'R' to restart", 40, constants.DEFAULT_TEXT_COLOR)
+      if status == LEVEL_BEATEN:
+        self.text = self.game.font_manager.render("Victory!", 40, constants.DEFAULT_TEXT_COLOR)
+        self.timers.append(TimedLevelVictory(2000, self))
+
+  def update_all(self, delta):
+    for group in self.updateable_groups:
+      group.update(delta)
+
+  def process_particles(self):
+    # add trail particles
+    for particle in self.powerup_particles:
+      while particle.trail_counter > constants.TRAIL_FREQUENCY:
+        self.trail_particles.add(TrailParticle(particle.actual_position, particle.get_color()))
+        particle.trail_counter -= constants.TRAIL_FREQUENCY
+
+  def all_tanks(self):
+    return itertools.chain(self.enemies, self.player_tanks)
+
+  def resolve_collisions(self):
+    for tank in self.all_tanks():
+      if tank_collides_with_tile(tank, self.solid):
+        tank.revert()
+
+    # check for tank to tank collisions
+    conflicts = True
+    loops = 0
+    while conflicts:
+      loops += 1
+      # break out if we've obviously hit an infinite loop
+      if loops > 20:
+        if self.game.settings['debug']:
+          print "tank collision resolution hit an infinite loop"
+        break
+      conflicts = False
+      for tank1 in self.all_tanks():
+        for tank2 in self.all_tanks():
+          if tank1 is not tank2 and not tank1.dead and not tank2.dead and tank_collides_with_tank(tank1, tank2):
+            conflicts = True
+
+            def revert(t1, t2):
+              t1.revert()
+              if tank_collides_with_tank(t1, t2):
+                t2.revert()
+
+            # revert the enemy first, if there is one
+            if tank2 in self.enemies:
+              revert(tank2, tank1)
+            else:
+              revert(tank1, tank2)
 
   def expire_expirables(self):
     for expirables in self.expirable_groups:
@@ -227,50 +319,15 @@ class Level:
 
     self.expire_expirables()
 
-    bullet_requests = []
-    bullet_request = self.player_controller.control(events, pressed, mouse, delta)
-    if bullet_request is not None:
-      bullet_requests.append(bullet_request)
+    bullet_requests = self.process_input(events, pressed, mouse, delta)
+    bullet_requests += self.process_ai(delta)
 
-    self.player_turrets.update(delta)
-    self.player_tanks.update(delta)
-    for player in self.player_tanks:
-      if tank_collides_with_tile(player, self.solid):
-        player.revert()
-
-    # AI control of enemy tanks
-    for enemy_ai in self.enemy_ai:
-      enemy_ai.control(delta)
-
-    # update enemies
-    self.enemies.update(delta)
-    self.enemy_turrets.update(delta)
-    for enemy in self.enemies:
-      if tank_collides_with_tile(enemy, self.solid):
-        enemy.revert()
-
-    # check for tank to tank collisions
-    for enemy in self.enemies:
-      if not self.player.dead and tank_collides_with_tank(enemy, self.player):
-        self.player.revert()
-        enemy.revert()
-
-    # turret AI
-    for turret_ai in self.enemy_turret_ai:
-      bullet_request = turret_ai.control(delta)
-      if bullet_request is not None:
-        bullet_requests.append(bullet_request)
+    self.update_all(delta)
+    self.resolve_collisions()
+    self.expire_expirables()
 
     # actually fire bullets, since now final locations of turrets are known
-    for bullet_request in bullet_requests:
-      bullet = bullet_request['turret'].fire()
-      if bullet is not None:
-        self.bullet_fire(bullet)
-
-    for group in self.updateable_groups:
-      group.update(delta)
-
-    self.expire_expirables()
+    self.process_firings(bullet_requests)
 
     # do bullet collision detection
     # bounce off walls once, then explode on second contact
@@ -291,7 +348,7 @@ class Level:
           self.stats.bullet_hit(bullet, shield.tank)
       if bullet.dead: continue
 
-      for tank in itertools.chain(self.enemies, self.player_tanks):
+      for tank in self.all_tanks():
         if not tank.dead and bullet_collides_with_tank(bullet, tank): 
           # do something to the player
           self.stats.bullet_hit(bullet, tank)
@@ -333,7 +390,7 @@ class Level:
 
     # check for collisions of splash explosions with tanks
     for explosion in self.explosions:
-      for tank in itertools.chain(self.enemies, self.player_tanks):
+      for tank in self.all_tanks():
         if explosion.damages and not tank in explosion.damaged and sprite_collide(tank, explosion):
           #self.stats.bullet_hit(explosion.bullet, tank)
           if self.tank_damage(tank):
@@ -344,7 +401,10 @@ class Level:
           explosion.damaged.add(tank)
 
     # apply powerups
+    # TODO: make powerups expirable, and have #2 stuff done on expiry.
+    # TODO: put #1 stuff in resolve_collisions
     for powerup in self.powerups:
+      #1
       if not powerup.taken:
         if powerup.can_take(self.player) and sprite_collide(self.player, powerup):
           self.play_sound("pickup", 0.2)
@@ -352,6 +412,7 @@ class Level:
           self.player.taking.add(powerup)
 
       if powerup.done:
+        #2
         self.play_sound("powerup", 0.2)
         self.powerups.remove(powerup)
 
@@ -365,24 +426,9 @@ class Level:
           particle = PowerupParticle(p, d, c)
           self.powerup_particles.add(particle)
 
-    # add trail particles
-    for particle in self.powerup_particles:
-      while particle.trail_counter > constants.TRAIL_FREQUENCY:
-        self.trail_particles.add(TrailParticle(particle.actual_position, particle.get_color()))
-        particle.trail_counter -= constants.TRAIL_FREQUENCY
-
-    status = self.get_status()
-    if not status == self.old_status and self.old_status == LEVEL_ONGOING:
-      self.old_status = status
-      if status == LEVEL_LOST:
-        self.text = self.game.font_manager.render("You lost... Press 'R' to restart", 40, constants.DEFAULT_TEXT_COLOR)
-      if status == LEVEL_BEATEN:
-        self.text = self.game.font_manager.render("Victory!", 40, constants.DEFAULT_TEXT_COLOR)
-        self.timers.append(TimedLevelVictory(2000, self))
-
-    for timer in list(self.timers):
-      if timer.update(delta):
-        self.timers.remove(timer)
+    self.process_particles()
+    self.check_for_status_change()
+    self.update_timers(delta)
 
   def write_line(self, line, screen):
     text = self.game.font_manager.render(line, 50, constants.DEFAULT_TEXT_COLOR)

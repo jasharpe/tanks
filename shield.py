@@ -47,12 +47,7 @@ class Shield(pygame.sprite.Sprite):
 
     circle_size = int(round(self.image.get_width() / 2))
     c = interpolation.interpolate_colors(t, constants.SHIELD_COLOR, constants.SHIELD_COLOR_TWO)
-    #c.b += int(round(100.0 * t))
     pygame.draw.circle(self.image, c, image_center, circle_size)
-    
-    # pulse
-    #pulse_size = int(round(interpolation.quadratic(self.pulse_time, constants.SHIELD_PULSE_PERIOD) * constants.TILE_SIZE * constants.SHIELD_RADIUS_RATIO))
-    #pygame.draw.circle(self.image, constants.SHIELD_PULSE_COLOR, image_center, pulse_size, min(pulse_size, 2))
     
     self.rect = self.image.get_rect(center=self.tank.position.scale(constants.TILE_SIZE))
 

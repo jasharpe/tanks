@@ -2,7 +2,6 @@ import pygame, sys, getopt, constants
 from game import Game
 
 FRAME_MS = 16
-MAX_SKIPPED_DRAWS = 5
 
 def usage():
   print '''-l for starting level (for debug purposes)'''
