@@ -15,8 +15,12 @@ from particle import *
 from shield import Shield
 from level_stats import LevelStats
 from player import PlayerController
-from collision_resolver import CollisionResolver
-from action_processor import ActionProcessor
+from collision_processor import CollisionProcessor
+from action_processor import ActionProcessor, ActionPostProcessor
+from update_processor import UpdateProcessor
+from particle_processor import ParticleProcessor
+from expiration_processor import ExpirationProcessor
+from level_events import TimedLevelVictory
 
 LEVEL_ONGOING = 1
 LEVEL_BEATEN = 2
@@ -26,52 +30,12 @@ LEVEL_INTRO = 1
 LEVEL_OUTRO = 2
 LEVEL_MAIN = 3
 
-class TimedLevelAdvance:
-  def __init__(self, time, level):
-    self.level = level
-    self.time_left = time
-
-  def update(self, delta):
-    self.time_left -= delta
-    self.time_left = max(0, self.time_left)
-    if self.time_left == 0:
-      self.level.game.register_event(AdvanceLevelEvent(self.level))
-    return self.time_left == 0
-
-class TimedLevelVictory:
-  def __init__(self, time, level):
-    self.level = level
-    self.time_left = time
-
-  def update(self, delta):
-    self.time_left -= delta
-    self.time_left = max(0, self.time_left)
-    if self.time_left == 0:
-      self.level.victory = True
-      self.level.cooldown = constants.SCREEN_CHANGE_COOLDOWN
-    return self.time_left == 0
-
-class TimedLevelRestart:
-  def __init__(self, time, level):
-    self.level = level
-    self.time_left = time
-
-  def update(self, delta):
-    self.time_left -= delta
-    self.time_left = max(0, self.time_left)
-    if self.time_left == 0:
-      self.level.game.register_event(RestartLevelEvent(self.level))
-    return self.time_left == 0
-
 class Level:
   def __init__(self, name, game, player_start, player_direction, board, enemies, powerups):
     self.stats = LevelStats()
     self.computed_stats = {}
     self.name = name
     self.game = game
-
-    self.collision_resolver = CollisionResolver(self)
-    self.action_processor = ActionProcessor(self)
 
     self.player_start = player_start
     self.player_direction = player_direction
@@ -132,40 +96,28 @@ class Level:
 
     self.paused = False
 
-    # these are updated IN ORDER
-    self.updateable_groups = [
-        # tanks must be before turrets!
-        self.enemies,
-        self.enemy_turrets,
-        self.player_tanks,
-        self.player_turrets,
-        self.bullets,
-        self.shockwaves,
-        self.explosions,
-        self.powerups,
-        self.powerup_particles,
-        self.trail_particles,
-        self.shields,
+    self.action_processor = ActionProcessor(self)
+    self.update_processor = UpdateProcessor(self)
+    self.collision_processor = CollisionProcessor(self)
+    self.expiration_processor = ExpirationProcessor(self)
+    self.action_post_processor = ActionPostProcessor(self, self.action_processor)
+    self.particle_processor = ParticleProcessor(self)
+
+    self.processors = [
+        self.expiration_processor,
+        # process all controls, both by the player, and by the AI
+        self.action_processor,
+        self.update_processor,
+        self.collision_processor,
+        self.expiration_processor,
+        # actually fire bullets, since now final locations of turrets are known
+        self.action_post_processor,
+        self.particle_processor,
     ]
 
-    # these are updated IN ORDER 
-    self.expirable_groups = [
-        self.powerup_particles,
-        self.trail_particles,
-        self.shields,
-        self.shockwaves,
-        self.explosions,
-        self.enemy_ai,
-        self.enemy_turret_ai,
-        self.player_tanks,
-        self.player_turrets,
-        self.powerups,
-    ]
-
-    # order shouldn't matter here
-    self.expirables_with_expire_actions = [
-        self.shields,
-        self.powerups,
+    self.processors_with_delta = [
+      self.action_processor,
+      self.update_processor
     ]
 
 
@@ -204,50 +156,13 @@ class Level:
         self.text = self.game.font_manager.render("Victory!", 40, constants.DEFAULT_TEXT_COLOR)
         self.timers.append(TimedLevelVictory(2000, self))
 
-  def update_all(self, delta):
-    for group in self.updateable_groups:
-      group.update(delta)
-
-  def process_particles(self):
-    # add trail particles
-    for particle in self.powerup_particles:
-      while particle.trail_counter > constants.TRAIL_FREQUENCY:
-        self.trail_particles.add(TrailParticle(particle.actual_position, particle.get_color()))
-        particle.trail_counter -= constants.TRAIL_FREQUENCY
-
   def all_tanks(self):
     return itertools.chain(self.enemies, self.player_tanks)
 
-  def expire_expirables(self):
-    for expirables in self.expirable_groups:
-      for expirable in list(expirables):
-        if expirable.expired():
-          expirables.remove(expirable)
-          # Some expirables need to do something on expiration.
-          # Let them do that here.
-          if expirables in self.expirables_with_expire_actions:
-            expirable.expire(self)
-
-  def bullet_fire(self, bullet):
-    self.play_sound("fire")
-    self.bullets.add(bullet)
-    self.stats.bullet_fired(bullet)
-
-  def bullet_explode(self, bullet):
-    self.explosions.add(bullet.get_explosion())
-    bullet.remove(self.bullets)
-    bullet.die()
-
-  def tank_explode(self, tank):
-    self.explosions.add(BigExplosion(tank.position))
-    tank.kill()
-    tank.turret.kill()
-
-  def tank_damage(self, tank):
-    if tank.hurt() is TANK_EXPLODED:
-      self.tank_explode(tank)
-      return True
-    return False
+  def update_controls(self, obj, events, pressed, mouse):
+    obj.events = events
+    obj.pressed = pressed
+    obj.mouse = mouse
 
   def update(self, delta, events, pressed, mouse):
     self.load_time = max(0, self.load_time - delta)
@@ -268,24 +183,13 @@ class Level:
     if self.paused:
       return
 
-    self.action_processor.update_controls(events, pressed, mouse)
-
-    self.action_processor.update_delta(delta)
+    self.update_controls(self.action_processor, events, pressed, mouse)
     
+    for processor in self.processors:
+      if processor in self.processors_with_delta:
+        processor.delta = delta
+      processor.process()
 
-    # make sure we don't have any expired things hanging around
-    self.expire_expirables()
-    # process all controls, both by the player, and by the AI
-    # TODO: remove dependency on delta here
-    self.action_processor.process()
-    
-    self.update_all(delta)
-    # if any of the updates caused collisions, resolve these
-    self.collision_resolver.resolve()
-    self.expire_expirables()
-    # actually fire bullets, since now final locations of turrets are known
-    self.action_processor.complete_processing()
-    self.process_particles()
     self.check_for_status_change()
     self.update_timers(delta)
 
@@ -323,6 +227,7 @@ class Level:
       self.write_line("%d. %s" % (self.game.current_level, self.name), screen)
       return
 
+    # TODO: refactor this into some stats drawing class
     if self.victory:
       # draw a stat screen
       self.top = 150

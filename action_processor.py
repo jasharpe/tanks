@@ -1,25 +1,27 @@
+class ActionPostProcessor(object):
+  def __init__(self, level, action_processor):
+    self.level = level
+    self.action_processor = action_processor
+
+  def bullet_fire(self, bullet):
+    self.level.play_sound("fire")
+    self.level.bullets.add(bullet)
+    self.level.stats.bullet_fired(bullet)
+
+  def process(self):
+    for bullet_request in self.action_processor.bullet_requests:
+      bullet = bullet_request['turret'].fire()
+      if bullet is not None:
+        self.bullet_fire(bullet)
+
 class ActionProcessor(object):
   def __init__(self, level):
     self.level = level
-
-  def update_delta(self, delta):
-    self.delta = delta
-
-  def update_controls(self, events, pressed, mouse):
-    self.events = events
-    self.pressed = pressed
-    self.mouse = mouse
 
   def process(self):
     bullet_requests = self.process_input()
     bullet_requests += self.process_ai()
     self.bullet_requests = bullet_requests
-
-  def complete_processing(self):
-    for bullet_request in self.bullet_requests:
-      bullet = bullet_request['turret'].fire()
-      if bullet is not None:
-        self.level.bullet_fire(bullet)
 
   def process_input(self):
     bullet_requests = []

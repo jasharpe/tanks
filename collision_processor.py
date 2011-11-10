@@ -1,13 +1,14 @@
 import constants
 import collision_detection as cd
 from bullet import BOUNCED, EXPLODED
-from explosion import Shockwave
+from explosion import Shockwave, BigExplosion
+from tank import TANK_EXPLODED
 
-class CollisionResolver(object):
+class CollisionProcessor(object):
   def __init__(self, level):
     self.level = level
 
-  def resolve(self):
+  def process(self):
     self.resolve_tanks()
     self.resolve_bullets()
     self.resolve_explosions()
@@ -27,12 +28,28 @@ class CollisionResolver(object):
       for tank in self.level.all_tanks():
         if explosion.damages and not tank in explosion.damaged and cd.sprite_collide(tank, explosion):
           #self.level.stats.bullet_hit(explosion.bullet, tank)
-          if self.level.tank_damage(tank):
+          if self.tank_damage(tank):
             self.level.play_sound("tank_explode")
             # TODO, add a bullet origin to explosions so they can be
             # credited to the correct player.
             #self.level.stats.kill(explosion.bullet, tank)
           explosion.damaged.add(tank)
+
+  def tank_explode(self, tank):
+    self.level.explosions.add(BigExplosion(tank.position))
+    tank.kill()
+    tank.turret.kill()
+
+  def tank_damage(self, tank):
+    if tank.hurt() is TANK_EXPLODED:
+      self.tank_explode(tank)
+      return True
+    return False
+
+  def bullet_explode(self, bullet):
+    self.level.explosions.add(bullet.get_explosion())
+    bullet.remove(self.level.bullets)
+    bullet.die()
 
   def resolve_bullets(self):
     resolvers = [
@@ -53,7 +70,7 @@ class CollisionResolver(object):
     for (result, position) in results:
       if result == EXPLODED:
         self.level.play_sound("bullet_explode")
-        self.level.bullet_explode(bullet)
+        self.bullet_explode(bullet)
       elif result == BOUNCED:
         self.level.play_sound("pong", 0.35)
         self.level.shockwaves.add(Shockwave(position))
@@ -61,14 +78,14 @@ class CollisionResolver(object):
   def resolve_distance_and_bullet(self, bullet):
     if bullet.total_distance > constants.BULLET_MAX_RANGE:
       self.level.play_sound("bullet_explode")
-      self.level.bullet_explode(bullet)
+      self.bullet_explode(bullet)
 
   def resolve_bullets_and_bullet(self, bullet):
     for bullet2 in filter(lambda x: x is not bullet, self.level.bullets):
       if cd.bullet_collides_with_bullet(bullet, bullet2):
         self.level.play_sound("bullet_explode")
-        self.level.bullet_explode(bullet)
-        self.level.bullet_explode(bullet2)
+        self.bullet_explode(bullet)
+        self.bullet_explode(bullet2)
 
         self.level.stats.bullet_collision(bullet, bullet2)
 
@@ -81,7 +98,7 @@ class CollisionResolver(object):
         
         # explode the bullet
         self.level.play_sound("bullet_explode")
-        self.level.bullet_explode(bullet)
+        self.bullet_explode(bullet)
 
         self.level.stats.bullet_hit(bullet, shield.tank)
 
@@ -90,14 +107,14 @@ class CollisionResolver(object):
       if not tank.dead and cd.bullet_collides_with_tank(bullet, tank): 
         # do something to the player
         self.level.stats.bullet_hit(bullet, tank)
-        if self.level.tank_damage(tank):
+        if self.tank_damage(tank):
           self.level.play_sound("tank_explode")
           self.level.stats.kill(bullet, tank)
         else:
           self.level.play_sound("bullet_explode")
 
         # explode the bullet
-        self.level.bullet_explode(bullet)
+        self.bullet_explode(bullet)
 
   def resolve_tanks(self):
     for tank in self.level.all_tanks():
