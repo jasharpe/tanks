@@ -10,11 +10,12 @@ from bullet import BOUNCED, EXPLODED
 from explosion import Explosion, BigExplosion, Shockwave
 from game_event import RestartLevelEvent, AdvanceLevelEvent, PlaySoundEvent
 from powerup import ShieldPowerup, RepairPowerup, SplashPowerup
-from collision import *
+import collision_detection as cd
 from particle import *
 from shield import Shield
 from level_stats import LevelStats
 from player import PlayerController
+from collision_resolver import CollisionResolver
 
 LEVEL_ONGOING = 1
 LEVEL_BEATEN = 2
@@ -68,6 +69,8 @@ class Level:
     self.name = name
     self.game = game
 
+    self.collision_resolver = CollisionResolver(self)
+
     self.player_start = player_start
     self.player_direction = player_direction
     self.board = board
@@ -118,7 +121,10 @@ class Level:
 
     self.timers = []
 
-    self.load_time = constants.LEVEL_LOAD_TIME
+    if self.game.settings['debug']:
+      self.load_time = constants.DEBUG_LEVEL_LOAD_TIME
+    else:
+      self.load_time = constants.LEVEL_LOAD_TIME
     self.victory = False
     self.cooldown = -1
 
@@ -149,10 +155,16 @@ class Level:
         self.enemy_ai,
         self.enemy_turret_ai,
         self.player_tanks,
-        self.player_turrets
+        self.player_turrets,
+        self.powerups,
     ]
-        
- 
+
+    self.expirables_with_expire_actions = [
+        self.shields,
+        self.powerups,
+    ]
+
+
   def play_sound(self, name, volume=1.0):
     self.game.register_event(PlaySoundEvent(self, name, volume))
 
@@ -173,6 +185,11 @@ class Level:
   def is_finished(self):
     return self.get_part() is LEVEL_OUTRO
 
+  def process_actions(self, events, pressed, mouse, delta):
+    bullet_requests = self.process_input(events, pressed, mouse, delta)
+    bullet_requests += self.process_ai(delta)
+    return bullet_requests
+
   def process_input(self, events, pressed, mouse, delta):
     bullet_requests = []
 
@@ -180,7 +197,7 @@ class Level:
       bullet_request = player_controller.control(events, pressed, mouse, delta)
       if bullet_request is not None:
         bullet_requests.append(bullet_request)
-    
+
     return bullet_requests
 
   def process_ai(self, delta):
@@ -195,7 +212,7 @@ class Level:
       bullet_request = turret_ai.control(delta)
       if bullet_request is not None:
         bullet_requests.append(bullet_request)
-    
+
     return bullet_requests
 
   def process_firings(self, bullet_requests):
@@ -233,38 +250,6 @@ class Level:
   def all_tanks(self):
     return itertools.chain(self.enemies, self.player_tanks)
 
-  def resolve_collisions(self):
-    for tank in self.all_tanks():
-      if tank_collides_with_tile(tank, self.solid):
-        tank.revert()
-
-    # check for tank to tank collisions
-    conflicts = True
-    loops = 0
-    while conflicts:
-      loops += 1
-      # break out if we've obviously hit an infinite loop
-      if loops > 20:
-        if self.game.settings['debug']:
-          print "tank collision resolution hit an infinite loop"
-        break
-      conflicts = False
-      for tank1 in self.all_tanks():
-        for tank2 in self.all_tanks():
-          if tank1 is not tank2 and not tank1.dead and not tank2.dead and tank_collides_with_tank(tank1, tank2):
-            conflicts = True
-
-            def revert(t1, t2):
-              t1.revert()
-              if tank_collides_with_tank(t1, t2):
-                t2.revert()
-
-            # revert the enemy first, if there is one
-            if tank2 in self.enemies:
-              revert(tank2, tank1)
-            else:
-              revert(tank1, tank2)
-
   def expire_expirables(self):
     for expirables in self.expirable_groups:
       for expirable in list(expirables):
@@ -272,10 +257,8 @@ class Level:
           expirables.remove(expirable)
           # Some expirables need to do something on expiration.
           # Let them do that here.
-          try:
-            expirable.expire()
-          except AttributeError:
-            pass
+          if expirables in self.expirables_with_expire_actions:
+            expirable.expire(self)
 
   def bullet_fire(self, bullet):
     self.play_sound("fire")
@@ -317,115 +300,17 @@ class Level:
     if self.paused:
       return
 
+    # make sure we don't have any expired things hanging around
     self.expire_expirables()
-
-    bullet_requests = self.process_input(events, pressed, mouse, delta)
-    bullet_requests += self.process_ai(delta)
-
+    # process all controls, both by the player, and by the AI
+    # TODO: remove dependency on delta here
+    bullet_requests = self.process_actions(events, pressed, mouse, delta)
     self.update_all(delta)
-    self.resolve_collisions()
+    # if any of the updates caused collisions, resolve these
+    self.collision_resolver.resolve()
     self.expire_expirables()
-
     # actually fire bullets, since now final locations of turrets are known
     self.process_firings(bullet_requests)
-
-    # do bullet collision detection
-    # bounce off walls once, then explode on second contact
-    for bullet in self.bullets:
-      # check for bullet/tank collisions
-      if bullet.dead: continue
-
-      for shield in self.shields:
-        if shield.active and bullet_collides_with_shield(bullet, shield):
-          # destroy the shield
-          self.play_sound("shield_die")
-          shield.die()
-          
-          # explode the bullet
-          self.play_sound("bullet_explode")
-          self.bullet_explode(bullet)
-
-          self.stats.bullet_hit(bullet, shield.tank)
-      if bullet.dead: continue
-
-      for tank in self.all_tanks():
-        if not tank.dead and bullet_collides_with_tank(bullet, tank): 
-          # do something to the player
-          self.stats.bullet_hit(bullet, tank)
-          if self.tank_damage(tank):
-            self.play_sound("tank_explode")
-            self.stats.kill(bullet, tank)
-          else:
-            self.play_sound("bullet_explode")
-
-          # explode the bullet
-          self.bullet_explode(bullet)
-      if bullet.dead: continue      
-
-      # check for bullet/bullet collisions
-      for bullet2 in filter(lambda x: x is not bullet, self.bullets):
-        if bullet_collides_with_bullet(bullet, bullet2):
-          self.play_sound("bullet_explode")
-          self.bullet_explode(bullet)
-          self.bullet_explode(bullet2)
-
-          self.stats.bullet_collision(bullet, bullet2)
-      if bullet.dead: continue
-
-      # check for bullets reaching max range
-      if bullet.total_distance > constants.BULLET_MAX_RANGE:
-        self.play_sound("bullet_explode")
-        self.bullet_explode(bullet)
-      # check for bullet bounces or wall collisions
-      else:
-        results = bullet.bounce(self.solid)
-        for (result, position) in results:
-          if result == EXPLODED:
-            self.play_sound("bullet_explode")
-            self.bullet_explode(bullet)
-          elif result == BOUNCED:
-            self.play_sound("pong", 0.35)
-            self.shockwaves.add(Shockwave(position))
-      if bullet.dead: continue
-
-    # check for collisions of splash explosions with tanks
-    for explosion in self.explosions:
-      for tank in self.all_tanks():
-        if explosion.damages and not tank in explosion.damaged and sprite_collide(tank, explosion):
-          #self.stats.bullet_hit(explosion.bullet, tank)
-          if self.tank_damage(tank):
-            self.play_sound("tank_explode")
-            # TODO, add a bullet origin to explosions so they can be
-            # credited to the correct player.
-            #self.stats.kill(explosion.bullet, tank)
-          explosion.damaged.add(tank)
-
-    # apply powerups
-    # TODO: make powerups expirable, and have #2 stuff done on expiry.
-    # TODO: put #1 stuff in resolve_collisions
-    for powerup in self.powerups:
-      #1
-      if not powerup.taken:
-        if powerup.can_take(self.player) and sprite_collide(self.player, powerup):
-          self.play_sound("pickup", 0.2)
-          powerup.take(self.player)
-          self.player.taking.add(powerup)
-
-      if powerup.done:
-        #2
-        self.play_sound("powerup", 0.2)
-        self.powerups.remove(powerup)
-
-        powerup.do(self, self.player)
-        self.player.taking.remove(powerup)
-        for i in xrange(0, constants.POWERUP_PARTICLES):
-          angle = i * 2 * math.pi / constants.POWERUP_PARTICLES
-          d = Vector(angle)
-          p = powerup.position
-          c = powerup.color_time
-          particle = PowerupParticle(p, d, c)
-          self.powerup_particles.add(particle)
-
     self.process_particles()
     self.check_for_status_change()
     self.update_timers(delta)

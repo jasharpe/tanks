@@ -1,8 +1,9 @@
 import pygame
-import constants
+import constants, math
 from geometry import *
 from interpolation import *
 from shield import Shield
+from particle import PowerupParticle
 
 class Powerup(pygame.sprite.Sprite):
   def __init__(self, p):
@@ -20,7 +21,24 @@ class Powerup(pygame.sprite.Sprite):
     self.explode_time = constants.POWERUP_EXPLODE_TIME
 
     self.update_graphics()
-  
+ 
+  def expired(self):
+    return self.done
+
+  def expire(self, level):
+    level.play_sound("powerup", 0.2)
+    level.powerups.remove(self)
+
+    self.do(level, self.target)
+    self.target.taking.remove(self)
+    for i in xrange(0, constants.POWERUP_PARTICLES):
+      angle = i * 2 * math.pi / constants.POWERUP_PARTICLES
+      d = Vector(angle)
+      p = self.position
+      c = self.color_time
+      particle = PowerupParticle(p, d, c)
+      level.powerup_particles.add(particle)
+
   def take(self, tank):
     self.taken = True
     self.target = tank

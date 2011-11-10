@@ -31,7 +31,7 @@ class Shield(pygame.sprite.Sprite):
   def expired(self):
     return self.to_remove
 
-  def expire(self):
+  def expire(self, level):
     self.tank.shields.remove(self)
 
   def die(self):

@@ -20,6 +20,7 @@ RESOLUTION_Y = TILE_SIZE * VERTICAL_TILES
 DEFAULT_TEXT_COLOR = pygame.Color(200, 200, 200)
 SELECTED_TEXT_COLOR = pygame.Color(255, 200, 200)
 
+DEBUG_LEVEL_LOAD_TIME = 200
 LEVEL_LOAD_TIME = 2000
 
 # the time in milliseconds before a screen responds to input
