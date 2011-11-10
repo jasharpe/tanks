@@ -16,6 +16,7 @@ from shield import Shield
 from level_stats import LevelStats
 from player import PlayerController
 from collision_resolver import CollisionResolver
+from action_processor import ActionProcessor
 
 LEVEL_ONGOING = 1
 LEVEL_BEATEN = 2
@@ -70,6 +71,7 @@ class Level:
     self.game = game
 
     self.collision_resolver = CollisionResolver(self)
+    self.action_processor = ActionProcessor(self)
 
     self.player_start = player_start
     self.player_direction = player_direction
@@ -146,6 +148,7 @@ class Level:
         self.shields,
     ]
 
+    # these are updated IN ORDER 
     self.expirable_groups = [
         self.powerup_particles,
         self.trail_particles,
@@ -159,6 +162,7 @@ class Level:
         self.powerups,
     ]
 
+    # order shouldn't matter here
     self.expirables_with_expire_actions = [
         self.shields,
         self.powerups,
@@ -184,42 +188,6 @@ class Level:
 
   def is_finished(self):
     return self.get_part() is LEVEL_OUTRO
-
-  def process_actions(self, events, pressed, mouse, delta):
-    bullet_requests = self.process_input(events, pressed, mouse, delta)
-    bullet_requests += self.process_ai(delta)
-    return bullet_requests
-
-  def process_input(self, events, pressed, mouse, delta):
-    bullet_requests = []
-
-    for player_controller in self.player_controllers:
-      bullet_request = player_controller.control(events, pressed, mouse, delta)
-      if bullet_request is not None:
-        bullet_requests.append(bullet_request)
-
-    return bullet_requests
-
-  def process_ai(self, delta):
-    bullet_requests = []
-
-    # AI control of enemy tanks
-    for enemy_ai in self.enemy_ai:
-      enemy_ai.control(delta)
-
-    # turret AI
-    for turret_ai in self.enemy_turret_ai:
-      bullet_request = turret_ai.control(delta)
-      if bullet_request is not None:
-        bullet_requests.append(bullet_request)
-
-    return bullet_requests
-
-  def process_firings(self, bullet_requests):
-    for bullet_request in bullet_requests:
-      bullet = bullet_request['turret'].fire()
-      if bullet is not None:
-        self.bullet_fire(bullet)
 
   def update_timers(self, delta):
     for timer in list(self.timers):
@@ -300,17 +268,23 @@ class Level:
     if self.paused:
       return
 
+    self.action_processor.update_controls(events, pressed, mouse)
+
+    self.action_processor.update_delta(delta)
+    
+
     # make sure we don't have any expired things hanging around
     self.expire_expirables()
     # process all controls, both by the player, and by the AI
     # TODO: remove dependency on delta here
-    bullet_requests = self.process_actions(events, pressed, mouse, delta)
+    self.action_processor.process()
+    
     self.update_all(delta)
     # if any of the updates caused collisions, resolve these
     self.collision_resolver.resolve()
     self.expire_expirables()
     # actually fire bullets, since now final locations of turrets are known
-    self.process_firings(bullet_requests)
+    self.action_processor.complete_processing()
     self.process_particles()
     self.check_for_status_change()
     self.update_timers(delta)

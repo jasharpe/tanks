@@ -1,3 +1,9 @@
 *.swp
 *.pyc
 tags
+wiki/*
+.idea/*
+tanks.vim
+diff
+makectags.bat
+user_data/*
