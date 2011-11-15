@@ -43,17 +43,19 @@ class Configuration(object):
         self.level.player_tanks,
         self.level.player_turrets,
         self.level.powerups,
+        self.level.mines,
     ]
 
     # order shouldn't matter here
     self.expirables_with_expire_actions = [
         self.level.shields,
         self.level.powerups,
+        self.level.mines,
     ]
 
     self.processors_with_delta = [
       self.level.action_processor,
-      self.level.update_processor
+      self.level.update_processor,
     ]
 
     self.drawables = [
@@ -70,4 +72,5 @@ class Configuration(object):
         self.level.shields,
         self.level.powerup_particles,
         self.level.trail_particles,
+        self.level.mines,
     ]

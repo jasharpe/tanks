@@ -85,6 +85,7 @@ class Level:
     self.bullets = Group()
     self.shockwaves = Group()
     self.explosions = Group()
+    self.mines = Group()
     self.old_status = LEVEL_ONGOING
     self.text = None
 
