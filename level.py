@@ -21,6 +21,8 @@ from update_processor import UpdateProcessor
 from particle_processor import ParticleProcessor
 from expiration_processor import ExpirationProcessor
 from level_events import TimedLevelVictory
+from configuration import Configuration
+from stats_screen import LoadScreen, StatsScreen
 
 LEVEL_ONGOING = 1
 LEVEL_BEATEN = 2
@@ -33,7 +35,8 @@ LEVEL_MAIN = 3
 class Level:
   def __init__(self, name, game, player_start, player_direction, board, enemies, powerups):
     self.stats = LevelStats()
-    self.computed_stats = {}
+    self.load_screen = LoadScreen(self)
+    self.stats_screen = StatsScreen(self)
     self.name = name
     self.game = game
 
@@ -103,23 +106,8 @@ class Level:
     self.action_post_processor = ActionPostProcessor(self, self.action_processor)
     self.particle_processor = ParticleProcessor(self)
 
-    self.processors = [
-        self.expiration_processor,
-        # process all controls, both by the player, and by the AI
-        self.action_processor,
-        self.update_processor,
-        self.collision_processor,
-        self.expiration_processor,
-        # actually fire bullets, since now final locations of turrets are known
-        self.action_post_processor,
-        self.particle_processor,
-    ]
-
-    self.processors_with_delta = [
-      self.action_processor,
-      self.update_processor
-    ]
-
+    self.config = Configuration(self)
+    self.config.configure()
 
   def play_sound(self, name, volume=1.0):
     self.game.register_event(PlaySoundEvent(self, name, volume))
@@ -185,85 +173,27 @@ class Level:
 
     self.update_controls(self.action_processor, events, pressed, mouse)
     
-    for processor in self.processors:
-      if processor in self.processors_with_delta:
+    for processor in self.config.processors:
+      if processor in self.config.processors_with_delta:
         processor.delta = delta
       processor.process()
 
     self.check_for_status_change()
     self.update_timers(delta)
 
-  def write_line(self, line, screen):
-    text = self.game.font_manager.render(line, 50, constants.DEFAULT_TEXT_COLOR)
-    text_pos = text.get_rect(centerx = constants.RESOLUTION_X / 2)
-    text_pos.top = self.top
-    self.top += text.get_height() + 10
-    screen.blit(text, text_pos)
-
-  def write_stat_line(self, part1, part2, screen):
-    text = self.game.font_manager.render(part1, 40, constants.DEFAULT_TEXT_COLOR)
-    text_pos = text.get_rect(right = constants.RESOLUTION_X / 2)
-    text_pos.top = self.top
-    screen.blit(text, text_pos)
-    
-    text = self.game.font_manager.render(part2, 40, constants.DEFAULT_TEXT_COLOR)
-    text_pos = text.get_rect(left = 3 * constants.RESOLUTION_X / 4)
-    text_pos.top = self.top
-    screen.blit(text, text_pos)
-
-    self.top += text.get_height() + 10
-
-  def get_or_compute(self, stat, getter):
-    if stat in self.computed_stats:
-      value = self.computed_stats[stat]
-    else:
-      value = getter()
-      self.computed_stats[stat] = value
-    return value
-
   def draw(self, screen):
     if self.load_time > 0:
-      self.top = 300
-      self.write_line("%d. %s" % (self.game.current_level, self.name), screen)
+      self.load_screen.draw(screen)
       return
 
-    # TODO: refactor this into some stats drawing class
     if self.victory:
       # draw a stat screen
-      self.top = 150
-      self.write_line("Victory!", screen)
-      self.top += 50
-      fired_shots = self.get_or_compute("fired_shots", lambda: self.stats.fired_shots(self.player))
-      self.write_stat_line("Fired Shots:", "%d" % fired_shots, screen)
-      hit_shots = self.get_or_compute("hit_shots", lambda: self.stats.hit_shots(self.player))
-      self.write_stat_line("Hits:", "%d" % hit_shots, screen)
-      blocked_shots = self.get_or_compute("blocked_shots", lambda: self.stats.blocked_shots(self.player))
-      self.write_stat_line("Blocked Shots:", "%d" % blocked_shots, screen)
-      accuracy = self.get_or_compute("accuracy", lambda: self.stats.accuracy(self.player))
-      accuracy_percentage = int(round(accuracy * 100))
-      self.write_stat_line("Accuracy:", "%d%%" % accuracy_percentage, screen)
-      kill_total = self.get_or_compute("kill_total", lambda: self.stats.kill_total(self.player))
-      self.write_stat_line("Kills:", "%d" % kill_total, screen)
-      friendly_fire_kills = self.get_or_compute("friendly_fire_kills", lambda: self.stats.friendly_fire_kills(self.player))
-      self.write_stat_line("FF Kills:", "%d" % friendly_fire_kills, screen)
-      if self.cooldown == 0:
-        self.top += 50
-        self.write_line("(Press any key to continue)", screen)
+      self.stats_screen.draw(screen)
       return
 
-    self.non_solid.draw(screen)
-    self.player_tanks.draw(screen)
-    self.player_turrets.draw(screen)
-    self.enemies.draw(screen)
-    self.enemy_turrets.draw(screen)
-    self.shockwaves.draw(screen)
-    self.explosions.draw(screen)
-    self.solid.draw(screen)
-    self.bullets.draw(screen)
-    self.powerups.draw(screen)
-    self.shields.draw(screen)
-    self.powerup_particles.draw(screen)
-    self.trail_particles.draw(screen)
+    for drawable in self.config.drawables:
+      drawable.draw(screen)
+    
     if self.text is not None:
       text_pos = self.text.get_rect(centerx = constants.RESOLUTION_X / 2)
       text_pos.top = 300
