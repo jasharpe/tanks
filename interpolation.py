@@ -18,7 +18,7 @@ def quadratic(val, max, min=0):
   return ease(linear(val, max, min), lambda x: x ** 2)
 
 def quadratic_bi(val, max, min=0):
-  return ease(linear_bi(val, max, min), lambda x: x ** 2)
+  return ease(linear_bi(val, max, min), lambda x: x ** 2)  
 
 def interpolate_colors(t, c1, c2):
   return pygame.Color(

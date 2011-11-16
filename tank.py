@@ -35,8 +35,10 @@ class Tank(pygame.sprite.Sprite):
     # speed of the tank
     self.speed = 0.0
     self.cooldown = 0
+    self.mine_cooldown = 0
 
     self.bullets = 0
+    self.mines = 0
     self.turret = None
 
     self.health = constants.TANK_HEALTH
@@ -52,6 +54,13 @@ class Tank(pygame.sprite.Sprite):
 
     self.update_image()
     self.update_graphics()
+
+  def can_lay_mine(self):
+    return self.mines < constants.TANK_MAX_MINES and self.mine_cooldown == 0
+  
+  def lay_mine(self):
+    self.mines += 1
+    self.mine_cooldown = constants.TANK_MINE_COOLDOWN
 
   def update_image(self):
     size = constants.TILE_SIZE * constants.TANK_SIZE_RATIO
@@ -106,6 +115,8 @@ class Tank(pygame.sprite.Sprite):
   def update(self, delta):
     self.cooldown -= delta
     self.cooldown = max(self.cooldown, 0)
+    self.mine_cooldown -= delta
+    self.mine_cooldown = max(self.mine_cooldown, 0)
     self.old_position = self.position
     self.position = self.position.translate(
         ((delta / 1000.0) * self.speed) *

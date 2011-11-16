@@ -13,6 +13,11 @@ class Configuration(object):
         # actually fire bullets, since now final locations of turrets are known
         self.level.action_post_processor,
         self.level.particle_processor,
+        self.level.sound_processor
+    ]
+
+    self.sound_groups = [
+        self.level.mines,  
     ]
 
     # these are updated IN ORDER
@@ -29,6 +34,7 @@ class Configuration(object):
         self.level.powerup_particles,
         self.level.trail_particles,
         self.level.shields,
+        self.level.mines,
     ]
 
     # these are updated IN ORDER 
@@ -44,6 +50,7 @@ class Configuration(object):
         self.level.player_turrets,
         self.level.powerups,
         self.level.mines,
+        self.level.bullets,
     ]
 
     # order shouldn't matter here
@@ -60,6 +67,7 @@ class Configuration(object):
 
     self.drawables = [
         self.level.non_solid,
+        self.level.mines,
         self.level.player_tanks,
         self.level.player_turrets,
         self.level.enemies,
@@ -72,5 +80,4 @@ class Configuration(object):
         self.level.shields,
         self.level.powerup_particles,
         self.level.trail_particles,
-        self.level.mines,
     ]

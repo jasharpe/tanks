@@ -11,8 +11,17 @@ class CollisionProcessor(object):
   def process(self):
     self.resolve_tanks()
     self.resolve_bullets()
+    self.resolve(self.level.mines, [
+      self.resolve_tanks_and_mine
+    ])
     self.resolve_explosions()
     self.resolve_powerups()
+
+  def resolve(self, group, resolvers):
+    for item in group:
+      for resolver in resolvers:
+        if item.expired(): continue
+        resolver(item)
 
   def resolve_powerups(self):
     for powerup in self.level.powerups:
@@ -25,6 +34,17 @@ class CollisionProcessor(object):
 
   def resolve_explosions(self):
     for explosion in self.level.explosions:
+      for mine in self.level.mines:
+        if not mine.expired() and explosion.damages and cd.sprite_collide(explosion, mine):
+          self.level.play_sound("tank_explode")
+          self.mine_explode(mine)
+
+      for shield in self.level.shields:
+        if shield.active and explosion.damages and cd.sprite_collide(shield, explosion):
+          self.level.play_sound("shield_die")
+          shield.die()
+          explosion.damaged.add(shield.tank)
+
       for tank in self.level.all_tanks():
         if explosion.damages and not tank in explosion.damaged and cd.sprite_collide(tank, explosion):
           #self.level.stats.bullet_hit(explosion.bullet, tank)
@@ -45,25 +65,47 @@ class CollisionProcessor(object):
       self.tank_explode(tank)
       return True
     return False
+  
+  def mine_explode(self, mine):
+    self.level.explosions.add(mine.get_explosion())
+    mine.die()
+
+  def mine_attack(self, mine, target):
+    mine.swell_and_explode()
 
   def bullet_explode(self, bullet):
     self.level.explosions.add(bullet.get_explosion())
-    bullet.remove(self.level.bullets)
     bullet.die()
+
+  def resolve_tanks_and_mine(self, mine):
+    for tank in self.level.all_tanks():
+      if not mine.exploding and not mine.expired() and not tank.dead and mine.active() and cd.sprite_collide(tank, mine.collision_circle):
+        self.level.play_sound("tank_explode")
+        self.mine_attack(mine, tank)
 
   def resolve_bullets(self):
     resolvers = [
-      self.resolve_shields_and_bullet,
-      self.resolve_tanks_and_bullet,
-      self.resolve_bullets_and_bullet,
-      self.resolve_distance_and_bullet,
-      self.resolve_walls_and_bullet
+        self.resolve_shields_and_bullet,
+        self.resolve_tanks_and_bullet,
+        self.resolve_bullets_and_bullet,
+        self.resolve_distance_and_bullet,
+        self.resolve_walls_and_bullet,
+        self.resolve_mines_and_bullet,
     ]
 
     for bullet in self.level.bullets:
       for resolver in resolvers:
-        if bullet.dead: continue
+        if bullet.expired(): continue
         resolver(bullet)
+
+  def resolve_mines_and_bullet(self, bullet):
+    for mine in self.level.mines:
+      if cd.sprite_collide(mine, bullet):
+        self.level.play_sound("tank_explode")
+        self.bullet_explode(bullet)
+        self.mine_explode(mine)
+
+        break
 
   def resolve_walls_and_bullet(self, bullet):
     results = bullet.bounce(self.level.solid)
@@ -89,6 +131,8 @@ class CollisionProcessor(object):
 
         self.level.stats.bullet_collision(bullet, bullet2)
 
+        break
+
   def resolve_shields_and_bullet(self, bullet):
     for shield in self.level.shields:
       if shield.active and cd.bullet_collides_with_shield(bullet, shield):
@@ -101,6 +145,8 @@ class CollisionProcessor(object):
         self.bullet_explode(bullet)
 
         self.level.stats.bullet_hit(bullet, shield.tank)
+
+        break
 
   def resolve_tanks_and_bullet(self, bullet):
     for tank in self.level.all_tanks():
@@ -115,6 +161,8 @@ class CollisionProcessor(object):
 
         # explode the bullet
         self.bullet_explode(bullet)
+
+        break
 
   def resolve_tanks(self):
     for tank in self.level.all_tanks():

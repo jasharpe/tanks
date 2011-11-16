@@ -20,9 +20,11 @@ from action_processor import ActionProcessor, ActionPostProcessor
 from update_processor import UpdateProcessor
 from particle_processor import ParticleProcessor
 from expiration_processor import ExpirationProcessor
+from sound_processor import SoundProcessor
 from level_events import TimedLevelVictory
 from configuration import Configuration
 from stats_screen import LoadScreen, StatsScreen
+from mine import Mine
 
 LEVEL_ONGOING = 1
 LEVEL_BEATEN = 2
@@ -106,6 +108,7 @@ class Level:
     self.expiration_processor = ExpirationProcessor(self)
     self.action_post_processor = ActionPostProcessor(self, self.action_processor)
     self.particle_processor = ParticleProcessor(self)
+    self.sound_processor = SoundProcessor(self)
 
     self.config = Configuration(self)
     self.config.configure()

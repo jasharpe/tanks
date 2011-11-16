@@ -44,6 +44,9 @@ class Bullet(pygame.sprite.Sprite):
     else:
       return Explosion(self.position)
 
+  def expired(self):
+    return self.dead
+
   def die(self):
     self.owner.bullets -= 1
     self.dead = True

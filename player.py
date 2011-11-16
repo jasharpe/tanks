@@ -11,9 +11,12 @@ class PlayerController(object):
   # the delta.
   def control(self, events, pressed, mouse, delta):
     bullet_request = None
+    mine_request = None
     for event in events:
       if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
         bullet_request = { 'turret' : self.turret }
+      elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+        mine_request = { 'tank' : self.tank }
 
     if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
       self.tank.turn_left(delta)
@@ -32,4 +35,4 @@ class PlayerController(object):
     # occurred. Probably not a real issue.
     self.turret.turn(delta, Point(float(mouse[0]) / constants.TILE_SIZE, float(mouse[1]) / constants.TILE_SIZE))
 
-    return bullet_request
+    return (bullet_request, mine_request)
