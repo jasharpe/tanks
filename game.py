@@ -13,8 +13,8 @@ STAGE_VICTORY = 3
 
 class Game:
   def __init__(self, starting_level=None):
-    self.settings = Settings(constants.DEFAULT_SETTINGS)
-    self.font_manager = FontManager(self.settings)
+    self.settings = Settings(constants.DEFAULT_SETTINGS, "game")
+    self.font_manager = FontManager()
     self.sound_manager = SoundManager(self.settings)
     self.sound_manager.trigger_music("movemovemove.ogg", 0.7)
     self.levels = []

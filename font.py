@@ -1,8 +1,7 @@
 import pygame, constants, os
 
 class FontManager:
-  def __init__(self, settings):
-    self.settings = settings
+  def __init__(self):
     self.cache = {}
 
   def render(self, text, size, color):

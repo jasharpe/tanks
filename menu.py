@@ -68,12 +68,6 @@ class Menu:
           self.menu_items[self.selected].activate(self.game)
 
   def draw(self, screen):
-    if not self.game.level is None:
-      level_text = '%d. %s' % (self.game.current_level, self.game.level.name)
-      level_image = self.game.font_manager.render(level_text, 50, constants.DEFAULT_TEXT_COLOR)
-      image_pos = level_image.get_rect(centerx = constants.RESOLUTION_X / 2)
-      image_pos.top = 200
-      screen.blit(level_image, image_pos)
     image_top = 300
     for menu_item in self.menu_items:
       menu_item.generate_image()
@@ -129,3 +123,12 @@ class MainMenu(Menu):
     self.menu_items.append(BasicItem(self, "Quit", register_event(QuitEvent)))
     self.menu_items[0].toggle_selected()
     self.selected = 0
+
+  def draw(self, screen):
+    if not self.game.level is None:
+      level_text = '%d. %s' % (self.game.current_level, self.game.level.name)
+      level_image = self.game.font_manager.render(level_text, 50, constants.DEFAULT_TEXT_COLOR)
+      image_pos = level_image.get_rect(centerx = constants.RESOLUTION_X / 2)
+      image_pos.top = 200
+      screen.blit(level_image, image_pos)
+    Menu.draw(self, screen)

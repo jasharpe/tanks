@@ -1,10 +1,11 @@
 import constants, os, ast
 
 class Settings:
-  def __init__(self, default_settings):
+  def __init__(self, default_settings, prefix):
     self.d = default_settings
+    self.prefix = prefix
     try:
-      with open(os.path.join(constants.USER_DATA_DIR, "settings"), 'r') as f:
+      with open(os.path.join(constants.USER_DATA_DIR, self.prefix + "_settings"), 'r') as f:
         for line in f.readlines():
           line = line.rstrip().split(":")
           (k, v) = line
@@ -16,7 +17,7 @@ class Settings:
     if not os.path.exists(constants.USER_DATA_DIR):
         os.makedirs(constants.USER_DATA_DIR)
     
-    with open(os.path.join(constants.USER_DATA_DIR, "settings"), 'w') as f:
+    with open(os.path.join(constants.USER_DATA_DIR, self.prefix + "_settings"), 'w') as f:
       for (k, v) in self.d.items():
         f.write("%s:%s\n" % (k, v))
 
