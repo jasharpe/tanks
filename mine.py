@@ -5,10 +5,10 @@ from interpolation import quadratic_bi, interpolate_colors, quadratic, reverse_l
 from collision_circle import CollisionCircle
 
 class Mine(pygame.sprite.Sprite):
-  def __init__(self, p, owner):
+  def __init__(self, position, owner):
     pygame.sprite.Sprite.__init__(self)
     
-    self.position = p
+    self.position = position
     self.owner = owner
     self.age = 0
     self.dead = False

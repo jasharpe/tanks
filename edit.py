@@ -1,6 +1,6 @@
 import sys
 from main import Main
-from editor import EditorGame
+from editor.game import EditorGame
 
 class EditorMain(Main):
   def __init__(self):

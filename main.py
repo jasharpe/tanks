@@ -1,6 +1,5 @@
 import pygame, sys, getopt, constants
 from game import Game
-from editor import EditorGame
 
 FRAME_MS = 16
 

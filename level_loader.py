@@ -12,7 +12,7 @@ powerup_type_map = {
     "SPLASH" : SplashPowerup
 }
 
-def load_level(number, game):
+def load(number):
   level_file = open(os.path.join(constants.DATA_DIR, "level%d.dat" % (number)), "r")
 
   # read from level file, allowing comments starting with '#' and blank lines,
@@ -100,4 +100,9 @@ def load_level(number, game):
   # by another tile or not)
   board.fix_accessibility()
 
-  return Level(name, game, player_start, math.pi * player_direction / 180.0, board, enemies, powerups)
+  return (name, player_start, player_direction, board, enemies, powerups)
+
+def load_level(number, game):
+  (name, player_start, player_direction, board, enemies, powerups) = load(number)
+  player_direction_radians = math.pi * player_direction / 180.0
+  return Level(name, game, player_start, player_direction_radians, board, enemies, powerups)
