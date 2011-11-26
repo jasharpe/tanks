@@ -1,5 +1,5 @@
 from font import FontManager
-from level_editor import LevelEditor
+from editor_level import EditorLevel
 import pygame
 import constants, editor_constants
 from settings import Settings
@@ -12,7 +12,7 @@ class EditorGame(object):
   def __init__(self):
     self.settings = Settings(editor_constants.DEFAULT_SETTINGS, "editor")
     self.font_manager = FontManager()
-    self.editor = LevelEditor(self)
+    self.editor = EditorLevel(self)
     self.menu_stack = []
     self.events = []
     self.should_quit = False
