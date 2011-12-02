@@ -1,8 +1,8 @@
 import pygame, constants, math, sys
-from menu import MainMenu
+import menu
 from victory import VictoryScreen
 from sound import SoundManager
-from level_loader import load_level
+import level_loader
 import getopt
 from font import FontManager
 from settings import Settings
@@ -21,7 +21,7 @@ class Game:
     # this is dumb :P
     for i in xrange(1, 10000):
       try:
-        level = load_level(i, self)
+        level = level_loader.load_level(i, self)
         self.levels.append(level.name)
       except:
         break
@@ -36,7 +36,7 @@ class Game:
       self.max_level = self.current_level
       self.stage = STAGE_MENU
       self.level = None
-      self.menu = MainMenu(self, None)
+      self.menu = menu.MainMenu(self, None)
     self.menu_stack = []
     self.events = []
     self.should_quit = False
@@ -70,8 +70,15 @@ class Game:
       self.victory = VictoryScreen(self)
       self.stage = STAGE_VICTORY
 
+  def hot_swap(self, module):
+    if self.settings['hot_swap']:
+      pass
+      #import reloader.reloader as reloader
+      #reloader.reload(module)
+
   def restart_level(self):
-    self.level = load_level(self.current_level, self)
+    self.hot_swap(level_loader)
+    self.level = level_loader.load_level(self.current_level, self)
 
   def go_to_level(self, level):
     self.current_level = level
@@ -80,7 +87,8 @@ class Game:
 
   def enter_menu(self, sub_menu=None):
     if sub_menu is None:
-      self.menu = MainMenu(self, self.level)
+      self.hot_swap(menu)
+      self.menu = menu.MainMenu(self, self.level)
       self.menu_stack = []
       self.stage = STAGE_MENU
     else:

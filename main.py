@@ -1,7 +1,10 @@
-import pygame, sys, getopt, constants
+import pygame
+#import reloader.reloader as reloader
+#reloader.enable(ignore_existing_dependencies=True)
+import sys, getopt, constants
 from game import Game
 
-FRAME_MS = 16
+FRAME_MS = 11
 
 class Main(object):
 
@@ -23,13 +26,15 @@ class Main(object):
 
     game = self.get_game()
 
-    last_current_time = pygame.time.get_ticks()
     clock = pygame.time.Clock()
+    start_time = pygame.time.get_ticks()
+    frames = 0
+    bad_frames = 0
     exit_program = False
     while True:
-      clock.tick(60)
+      clock.tick(91)
 
-      current_time = pygame.time.get_ticks()
+      frame_start_time = pygame.time.get_ticks()
       delta = FRAME_MS
 
       # event handling
@@ -52,13 +57,18 @@ class Main(object):
       game.draw(screen) 
       pygame.display.flip()
 
-      time = (current_time - last_current_time)
-      if time > FRAME_MS:
+      frame_end_time = pygame.time.get_ticks()
+      frame_time = (frame_end_time - frame_start_time)
+      if frame_time > FRAME_MS:
         if game.settings['debug']:
-          print "Last frame took %d" % (time)
+          bad_frames += 1
+          print "Last frame took %d" % (frame_time)
       
-      last_current_time = current_time
+      frames += 1
 
+    total_time = (pygame.time.get_ticks() - start_time)
+    #print "time per frame: %d" % (total_time / frames)
+    #print "percent bad frames: %f%%" % (100 * float(bad_frames) / frames) 
     pygame.quit()
     return 0
 
@@ -87,5 +97,8 @@ class GameMain(Main):
       if opt in ("-l", "--level"):
         self.starting_level = int(arg)
 
+def main(argv):
+  return GameMain().main(argv)
+
 if __name__ == "__main__":
-  sys.exit(GameMain().main(sys.argv))
+  sys.exit(main(sys.argv))

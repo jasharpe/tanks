@@ -3,7 +3,8 @@ import pygame
 DEFAULT_SETTINGS = {
     'music': True,
     'sound': True,
-    'debug': False
+    'debug': False,
+    'hot_swap': True
 }
 
 # cheats
@@ -103,7 +104,7 @@ SHIELD_PULSE_COLOR = pygame.Color(100, 100, 100, 255)
 
 SPLASH_TANK_DURATION = 10000
 SPLASH_TANK_COLOR_PERIOD = 2000
-SPLASH_TANK_COLOR = pygame.Color(60, 110, 20)
+SPLASH_TANK_COLOR = pygame.Color(150, 150, 20)
 
 MINE_SIZE_RATIO = 0.3
 MINE_COLOR_MODULATION_TIME = 800

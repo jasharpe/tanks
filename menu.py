@@ -89,7 +89,8 @@ class SettingsMenu(Menu):
         BasicItem(self, "Back", register_event(MenuBackEvent)),
         CheckItem(self, "Music", get_setting('music'), register_event(ToggleMusicEvent)),
         CheckItem(self, "Sound", get_setting('sound'), register_event(ToggleSoundEvent)),
-        CheckItem(self, "Debug", get_setting('debug'), register_event(ToggleDebugEvent))
+        CheckItem(self, "Debug", get_setting('debug'), register_event(ToggleDebugEvent)),
+        #CheckItem(self, "Hot Swap", get_setting('hot_swap'), register_event(ToggleHotSwapEvent))
     ]
     self.menu_items[0].toggle_selected()
     self.selected = 0

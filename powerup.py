@@ -1,9 +1,9 @@
 import pygame
 import constants, math
-from geometry import *
-from interpolation import *
-from shield import Shield
-from particle import PowerupParticle
+import geometry
+import interpolation
+import shield
+import particle
 
 class Powerup(pygame.sprite.Sprite):
   def __init__(self, p):
@@ -33,25 +33,24 @@ class Powerup(pygame.sprite.Sprite):
     self.target.taking.remove(self)
     for i in xrange(0, constants.POWERUP_PARTICLES):
       angle = i * 2 * math.pi / constants.POWERUP_PARTICLES
-      d = Vector(angle)
+      d = geometry.Vector(angle)
       p = self.position
       c = self.color_time
-      particle = PowerupParticle(p, d, c)
-      level.powerup_particles.add(particle)
+      level.powerup_particles.add(particle.PowerupParticle(p, d, c))
 
   def take(self, tank):
     self.taken = True
     self.target = tank
 
   def update_graphics(self):
-    t = linear(self.explode_time, constants.POWERUP_EXPLODE_TIME)
+    t = interpolation.linear(self.explode_time, constants.POWERUP_EXPLODE_TIME)
     size = int(round(constants.TILE_SIZE * constants.POWERUP_SIZE_RATIO * t))
     self.image = pygame.Surface([size, size], flags=pygame.SRCALPHA)
     self.image.fill(constants.COLOR_TRANSPARENT)
     center = self.position.scale(constants.TILE_SIZE)
     image_center = (self.image.get_width() / 2, self.image.get_height() / 2)
-    r = quadratic_bi(self.color_time, constants.POWERUP_COLOR_MODULATION_TIME)
-    c = interpolate_colors(r, constants.POWERUP_COLOR_ONE, constants.POWERUP_COLOR_TWO)
+    r = interpolation.quadratic_bi(self.color_time, constants.POWERUP_COLOR_MODULATION_TIME)
+    c = interpolation.interpolate_colors(r, constants.POWERUP_COLOR_ONE, constants.POWERUP_COLOR_TWO)
     pygame.draw.circle(self.image, c, image_center, int(round(self.image.get_width() / 2)))
     self.rect = self.image.get_rect(center=center)
 
@@ -71,9 +70,9 @@ class Powerup(pygame.sprite.Sprite):
 
 class ShieldPowerup(Powerup):
   def do(self, level, tank):
-    shield = Shield(tank)
-    level.shields.add(shield)
-    tank.shields.append(shield)
+    shield2 = shield.Shield(tank)
+    level.shields.add(shield2)
+    tank.shields.append(shield2)
 
   def can_take(self, tank):
     if tank.shields:

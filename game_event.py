@@ -45,6 +45,10 @@ class ToggleDebugEvent(Event):
   def do(self):
     self.game.settings['debug'] = not self.game.settings['debug']
 
+class ToggleHotSwapEvent(Event):
+  def do(self):
+    self.game.settings['hot_swap'] = not self.game.settings['hot_swap']
+
 class AdvanceLevelEvent:
   def __init__(self, level):
     self.level = level
