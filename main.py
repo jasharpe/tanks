@@ -19,8 +19,7 @@ class Main(object):
 
     pygame.mixer.pre_init(frequency=22050, size=-16, channels=16, buffer=512)
     pygame.init()
-    screen = pygame.display.set_mode(
-        [constants.RESOLUTION_X, constants.RESOLUTION_Y])
+    screen = pygame.display.set_mode(self.get_resolution())
     
     self.set_caption(self.get_caption())
 
@@ -76,6 +75,9 @@ class GameMain(Main):
   def __init__(self):
     Main.__init__(self)
     self.starting_level = None
+
+  def get_resolution(self):
+    return [constants.RESOLUTION_X, constants.RESOLUTION_Y]
 
   def get_caption(self):
     return "Tanks!"

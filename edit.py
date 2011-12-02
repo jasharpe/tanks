@@ -1,10 +1,14 @@
 import sys
 from main import Main
 from editor.editor_game import EditorGame
+import editor.editor_constants as editor_constants
 
 class EditorMain(Main):
   def __init__(self):
     Main.__init__(self)
+
+  def get_resolution(self):
+    return [editor_constants.RESOLUTION_X, editor_constants.RESOLUTION_Y]
 
   def get_caption(self):
     return "Tanks! Editor"
