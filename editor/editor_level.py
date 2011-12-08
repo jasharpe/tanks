@@ -6,6 +6,14 @@ from geometry import Point
 from pygame.sprite import Group
 import collision_detection as cd
 
+# TODO:
+# * Only one player entity
+# * tank entities should be square, and should have rotational information
+# * powerups need type
+# * enemies need waypoints
+# * need to place tiles (walls and floor)
+# * saving and loading
+
 class Entity(pygame.sprite.Sprite):
   def __init__(self, data, position, font_manager):
     pygame.sprite.Sprite.__init__(self)
@@ -83,6 +91,89 @@ class DeleteSelectionAction(EditorAction):
       self.level.entities.add(entity)
     self.level.set_selection(self.entities)
 
+class ToolbarOption(pygame.sprite.Sprite):
+  def __init__(self, top, name, data, font_manager):
+    pygame.sprite.Sprite.__init__(self)
+
+    self.selected = False
+
+    self.name = name
+    self.data = data
+
+    self.position = Point(constants.HORIZONTAL_TILES + editor_constants.RIGHT_BAR_ITEM_SPACING, top)
+    self.size = editor_constants.RIGHT_BAR_ITEM_RATIO
+
+    self.font_manager = font_manager
+
+    self.update_graphics()
+
+  def toggle_select(self):
+    self.selected = not self.selected
+    self.update_graphics()
+
+  def update_graphics(self):
+    size = int(round(self.size * constants.TILE_SIZE))
+    self.image = pygame.Surface([size, size])
+    self.image.fill(self.data.color)
+    if self.selected:
+      rect = pygame.Rect(self.image.get_rect())
+      pygame.draw.rect(self.image, pygame.Color(0, 0, 0), rect, 1)
+    text = self.font_manager.render(self.data.label, 20, pygame.color.Color(0, 0, 0))
+    dest = Point(self.image.get_width() / 2 - text.get_width() / 2, self.image.get_height() / 2 - text.get_height() / 2)
+    self.image.blit(text, dest) 
+    self.rect = self.image.get_rect(topleft=self.position.scale(constants.TILE_SIZE))
+
+class VerticalToolbar(pygame.sprite.Sprite):
+  def __init__(self, editor_level, font_manager):
+    pygame.sprite.Sprite.__init__(self)
+
+    self.editor_level = editor_level
+
+    self.selected = None
+    self.position = Point(constants.HORIZONTAL_TILES, 0)
+    self.width = editor_constants.RIGHT_BAR_RATIO
+    self.height = constants.VERTICAL_TILES
+
+    self.options = Group()
+    self.hotkeys = {}
+    top = editor_constants.RIGHT_BAR_ITEM_SPACING
+    for (name, data) in editor_constants.ENTITY_DATA.items():
+      option = ToolbarOption(top, name, data, font_manager)
+      self.options.add(option)
+      top += editor_constants.RIGHT_BAR_ITEM_RATIO + editor_constants.RIGHT_BAR_ITEM_SPACING
+      self.hotkeys[data.hotkey] = option
+    self.select(self.options.sprites()[0])
+
+    self.update_graphics()
+
+  def hotkey(self, hotkey):
+    if hotkey in self.hotkeys:
+      self.select(self.hotkeys[hotkey])
+
+  def select(self, option):
+    if self.selected is not None:
+      self.selected.toggle_select()
+    self.selected = option
+    self.selected.toggle_select()
+
+    self.editor_level.entity_to_create = option.name
+
+  def left_click(self, position, pressed):
+    for option in self.options:
+      rect = pygame.Rect(option.position.scale(constants.TILE_SIZE), (constants.TILE_SIZE * option.size, constants.TILE_SIZE * option.size))
+      if rect.collidepoint(position.scale(constants.TILE_SIZE)):
+        self.select(option)
+
+  def update_graphics(self):
+    width = int(round(self.width * constants.TILE_SIZE))
+    height = int(round(self.height * constants.TILE_SIZE))
+    self.image = pygame.Surface([width, height])
+    self.image.fill(editor_constants.TOOLBAR_COLOR)
+    self.rect = self.image.get_rect(topleft=self.position.scale(constants.TILE_SIZE))
+
+  def draw(self, screen):
+    self.options.draw(screen)
+
 MODE_ADD = 1
 MODE_SELECT = 2
 
@@ -103,6 +194,10 @@ class EditorLevel(object):
     self.font_manager = FontManager()
 
     self.entities = Group()
+
+    self.toolbars = Group()
+    self.toolbars.add(VerticalToolbar(self, self.font_manager))
+
     self.entity_to_create = 'ENEMY'
     self.mode = MODE_ADD
 
@@ -117,7 +212,6 @@ class EditorLevel(object):
   def add_action(self, action_type, *args):
     self.undone_action_stack = []
     self.pending_actions.append(action_type(self, *args))
-    print self.undone_action_stack
 
   def get_entity(self, position):
     data = editor_constants.ENTITY_DATA[self.entity_to_create]
@@ -159,6 +253,11 @@ class EditorLevel(object):
         self.selected_entities = [entity]
 
   def left_click(self, position, pressed):
+    for toolbar in self.toolbars:
+      rect = pygame.Rect(toolbar.position, (toolbar.width, toolbar.height))
+      if rect.collidepoint(position):
+        toolbar.left_click(position, pressed)
+
     if self.mode == MODE_ADD:
       entity = self.get_entity(position)
       # make sure the entity doesn't intersect any others
@@ -202,6 +301,9 @@ class EditorLevel(object):
           self.pending_actions.append(action)
       elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
         self.left_click(Point(event.pos[0], event.pos[1]).scale(1.0 / constants.TILE_SIZE), pressed)
+      elif event.type == pygame.KEYDOWN:
+        for toolbar in self.toolbars:
+          toolbar.hotkey(event.key)
 
     for action in self.pending_actions:
       action.do()
@@ -215,3 +317,6 @@ class EditorLevel(object):
 
   def draw(self, screen):
     self.entities.draw(screen)
+    self.toolbars.draw(screen)
+    for toolbar in self.toolbars:
+      toolbar.draw(screen)

@@ -1,4 +1,4 @@
-import sys
+import sys, os
 from main import Main
 from editor.editor_game import EditorGame
 import editor.editor_constants as editor_constants
@@ -23,4 +23,5 @@ class EditorMain(Main):
     pass
 
 if __name__ == "__main__":
+  os.environ['SDL_VIDEO_CENTERED'] = '1'
   sys.exit(EditorMain().main(sys.argv))
