@@ -25,16 +25,17 @@ EDITOR_AREA_BOUNDS = {
 }
 
 class EntityData(object):
-  def __init__(self, ratio, label, hotkey, color):
+  def __init__(self, ratio, label, hotkey, color, shape):
     self.ratio = ratio
     self.label = label
     self.hotkey = hotkey
     self.color = color
+    self.shape = shape
 
 ENTITY_SELECTED_COLOR = pygame.Color(255, 255, 0)
 
 ENTITY_DATA = {
-    'PLAYER' : EntityData(constants.TANK_SIZE_RATIO, 'S', pygame.K_s, pygame.Color(0, 255, 0)),
-    'ENEMY' : EntityData(constants.TANK_SIZE_RATIO, 'E', pygame.K_e, pygame.Color(255, 0, 0)),
-    'POWERUP' : EntityData(constants.POWERUP_SIZE_RATIO, 'P', pygame.K_p, pygame.Color(0, 0, 255))
+    'PLAYER' : EntityData(constants.TANK_SIZE_RATIO, 'S', pygame.K_s, pygame.Color(0, 255, 0), "SQUARE"),
+    'ENEMY' : EntityData(constants.TANK_SIZE_RATIO, 'E', pygame.K_e, pygame.Color(255, 0, 0), "SQUARE"),
+    'POWERUP' : EntityData(constants.POWERUP_SIZE_RATIO, 'P', pygame.K_p, pygame.Color(0, 0, 255), "ROUND")
 }

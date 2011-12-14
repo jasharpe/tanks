@@ -88,3 +88,12 @@ def sprite_collide_exact(sprite1, sprite2):
 def sprite_collide(sprite1, sprite2):
   return pygame.sprite.collide_rect(sprite1, sprite2) and \
          sprite_collide_exact(sprite1, sprite2)
+
+def sprite_contains_exact(sprite, point):
+  x_offset = int(round(point.x - sprite.rect.x))
+  y_offset = int(round(point.y - sprite.rect.y))
+  return not is_transparent(sprite.image.get_at((x_offset, y_offset)))
+
+def sprite_contains(sprite, point):
+  return sprite.rect.collidepoint(point) and \
+         sprite_contains_exact(sprite, point)

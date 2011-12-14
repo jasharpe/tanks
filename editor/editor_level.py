@@ -5,27 +5,48 @@ from font import FontManager
 from geometry import Point
 from pygame.sprite import Group
 import collision_detection as cd
+import math
 
 # TODO:
-# * Only one player entity
-# * tank entities should be square, and should have rotational information
 # * powerups need type
 # * enemies need waypoints
 # * need to place tiles (walls and floor)
 # * saving and loading
 
+def create_entity(name, data, position, font_manager):
+  if name in ["PLAYER"]:
+    return PlayerEntity(name, data, position, font_manager)
+  else:
+    return Entity(name, data, position, font_manager)
+
 class Entity(pygame.sprite.Sprite):
-  def __init__(self, data, position, font_manager):
+  def __init__(self, name, data, position, font_manager):
     pygame.sprite.Sprite.__init__(self)
     
+    self.name = name
     self.data = data
     self.position = position
     self.font_manager = font_manager
 
     self.selected = False
 
+    self.rotating = False
+    # rotation in radians
+    self.direction = 0.0
+
     self.update_graphics()
   
+  def contains_point(self, position):
+    if self.data.shape in ["ROUND"]:
+      return (position - self.position).length() < self.data.ratio / 2
+    else:
+      return cd.sprite_contains(self, position.scale(constants.TILE_SIZE))
+
+  # rotate the entity by rotation radians
+  def rotate(self, rotation, sign):
+    self.direction += sign * rotation
+    self.update_graphics()
+
   def set_position(self, position):
     self.position = position
 
@@ -34,7 +55,8 @@ class Entity(pygame.sprite.Sprite):
     self.update_graphics()
 
   def update(self, delta):
-    pass
+    if self.rotating:
+      self.rotate(2 * math.pi * (delta / 1000.0), self.rotation_sign)
 
   def update_graphics(self):
     size = int(round(constants.TILE_SIZE * self.data.ratio))
@@ -43,7 +65,13 @@ class Entity(pygame.sprite.Sprite):
     center = self.position.scale(constants.TILE_SIZE)
     image_center = (self.image.get_width() / 2, self.image.get_height() / 2)
     color = editor_constants.ENTITY_SELECTED_COLOR if self.selected else self.data.color
-    pygame.draw.circle(self.image, color, image_center, int(round(self.image.get_width() / 2)))
+    if self.data.shape == "ROUND":
+      pygame.draw.circle(self.image, color, image_center, int(round(self.image.get_width() / 2)))
+    elif self.data.shape == "SQUARE":
+      self.image.fill(color)
+      self.image = pygame.transform.rotate(self.image, -self.direction * 180.0 / math.pi)
+    else:
+      raise Exception("Unrecognized shape " + self.data.shape)
     text = self.font_manager.render(self.data.label, 20, pygame.color.Color(0, 0, 0))
     dest = Point(self.image.get_width() / 2 - text.get_width() / 2, self.image.get_height() / 2 - text.get_height() / 2)
     self.image.blit(text, dest)
@@ -60,6 +88,22 @@ class EditorAction(object):
     else:
       return self.backward()
 
+class RotateSelectionAction(EditorAction):
+  def __init__(self, level, entities, rotation, sign, undo=False):
+    EditorAction.__init__(self, level, undo)
+
+    self.entities = list(entities)
+    self.rotation = rotation
+    self.sign = sign
+
+  def forward(self):
+    for entity in self.entities:
+      entity.rotate(self.rotation, self.sign)
+
+  def backward(self):
+    for entity in self.entities:
+      entity.rotate(self.rotation, -self.sign)
+
 class AddEntityAction(EditorAction):
   def __init__(self, level, entity, undo=False):
     EditorAction.__init__(self, level, undo)
@@ -67,28 +111,25 @@ class AddEntityAction(EditorAction):
     self.entity = entity
 
   def forward(self):
-    self.level.entities.add(self.entity)
+    self.level.add_entity(self.entity)
 
   def backward(self):
-    self.level.entities.remove(self.entity)
-    if self.entity in self.level.selected_entities:
-      self.entity.select(False)
-      self.level.selected_entities.remove(self.entity)
+    self.level.remove_entity(self.entity)
 
 class DeleteSelectionAction(EditorAction):
   def __init__(self, level, entities, undo=False):
     EditorAction.__init__(self, level, undo)
 
-    self.entities = entities
+    self.entities = list(entities)
 
   def forward(self):
     self.level.clear_selection()
     for entity in self.entities:
-      self.level.entities.remove(entity)
+      self.level.remove_entity(entity)
 
   def backward(self):
     for entity in self.entities:
-      self.level.entities.add(entity)
+      self.level.add_entity(entity)
     self.level.set_selection(self.entities)
 
 class ToolbarOption(pygame.sprite.Sprite):
@@ -196,10 +237,14 @@ class EditorLevel(object):
     self.entities = Group()
 
     self.toolbars = Group()
-    self.toolbars.add(VerticalToolbar(self, self.font_manager))
+    vertical_toolbar = VerticalToolbar(self, self.font_manager)
+    self.toolbars.add(vertical_toolbar)
 
-    self.entity_to_create = 'ENEMY'
+    self.player_exists = False
+    self.entity_to_create = vertical_toolbar.selected.name
     self.mode = MODE_ADD
+
+    self.rotating = False
 
     self.pending_actions = []
     self.action_stack = []
@@ -215,7 +260,20 @@ class EditorLevel(object):
 
   def get_entity(self, position):
     data = editor_constants.ENTITY_DATA[self.entity_to_create]
-    return Entity(data, position, self.font_manager)
+    return Entity(self.entity_to_create, data, position, self.font_manager)
+
+  def add_entity(self, entity):
+    if entity.name == "PLAYER":
+      self.player_exists = True
+    self.entities.add(entity)
+
+  def remove_entity(self, entity):
+    if entity.name == "PLAYER":
+      self.player_exists = False
+    self.entities.remove(entity)
+    if entity in self.selected_entities:
+      entity.select(False)
+      self.selected_entities.remove(entity)
 
   def delete_selection(self):
     self.add_action(DeleteSelectionAction, list(self.selected_entities))
@@ -267,10 +325,11 @@ class EditorLevel(object):
       # make sure the entity creation is in bounds
       if not sphere_in_bounds(position, entity.data.ratio / 2, editor_constants.EDITOR_AREA_BOUNDS):
         return
-      self.add_action(AddEntityAction, entity)
+      if entity.name != "PLAYER" or not self.player_exists:
+        self.add_action(AddEntityAction, entity)
     elif self.mode == MODE_SELECT:
       for entity in self.entities:
-        if (position - entity.position).length() < entity.data.ratio / 2:
+        if entity.contains_point(position):
           shift = (pressed[pygame.K_LCTRL] or pressed[pygame.K_RCTRL])
           self.selection_click(entity, shift)
           break
@@ -283,27 +342,50 @@ class EditorLevel(object):
       self.mode = MODE_ADD
     print self.mode
 
+  def start_rotation(self, key):
+    self.rotating = True
+    self.total_rotation = 0
+    for entity in self.selected_entities:
+      entity.rotating = True
+      entity.rotation_sign = (1 if key == pygame.K_RIGHT else -1)
+    self.rotation_key = key
+
+  def stop_rotation(self, key):
+    self.rotating = False
+    for entity in self.selected_entities:
+      entity.rotating = False
+    # directly append to action stack so that we 
+    self.action_stack.append(RotateSelectionAction(self, self.selected_entities, self.total_rotation, (1 if key == pygame.K_RIGHT else -1)))
+
   def update(self, delta, events, pressed, mouse):
-    for event in events:
-      if event.type == pygame.KEYDOWN and event.key == pygame.K_m:
-        self.switch_mode()
-      elif event.type == pygame.KEYDOWN and event.key == pygame.K_DELETE and self.mode == MODE_SELECT:
-        self.delete_selection()
-      elif event.type == pygame.KEYDOWN and event.key == pygame.K_y and event.mod & pygame.KMOD_CTRL:
-        if self.undone_action_stack:
-          action = self.undone_action_stack.pop()
-          action.undo = False
-          self.pending_actions.append(action)
-      elif event.type == pygame.KEYDOWN and event.key == pygame.K_z and event.mod & pygame.KMOD_CTRL:
-        if self.action_stack:
-          action = self.action_stack.pop()
-          action.undo = True
-          self.pending_actions.append(action)
-      elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-        self.left_click(Point(event.pos[0], event.pos[1]).scale(1.0 / constants.TILE_SIZE), pressed)
-      elif event.type == pygame.KEYDOWN:
-        for toolbar in self.toolbars:
-          toolbar.hotkey(event.key)
+    if self.rotating:
+      for event in events:
+        if event.type == pygame.KEYUP and event.key == self.rotation_key:
+          self.stop_rotation(event.key)
+
+    else:
+      for event in events:
+        if event.type == pygame.KEYDOWN and (event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT) and event.mod & pygame.KMOD_CTRL and self.mode == MODE_SELECT and self.selected_entities:
+          self.start_rotation(event.key)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_m:
+          self.switch_mode()
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_DELETE and self.mode == MODE_SELECT:
+          self.delete_selection()
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_y and event.mod & pygame.KMOD_CTRL:
+          if self.undone_action_stack:
+            action = self.undone_action_stack.pop()
+            action.undo = False
+            self.pending_actions.append(action)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_z and event.mod & pygame.KMOD_CTRL:
+          if self.action_stack:
+            action = self.action_stack.pop()
+            action.undo = True
+            self.pending_actions.append(action)
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+          self.left_click(Point(event.pos[0], event.pos[1]).scale(1.0 / constants.TILE_SIZE), pressed)
+        elif event.type == pygame.KEYDOWN:
+          for toolbar in self.toolbars:
+            toolbar.hotkey(event.key)
 
     for action in self.pending_actions:
       action.do()
@@ -312,6 +394,9 @@ class EditorLevel(object):
       else:
         self.action_stack.append(action)
     self.pending_actions = []
+
+    if self.rotating:
+      self.total_rotation += 2 * math.pi * (delta / 1000.0)
 
     self.entities.update(delta)
 
