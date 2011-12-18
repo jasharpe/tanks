@@ -43,7 +43,7 @@ class TankAI:
     return not self.tank in self.level.enemies
 
   def update_waypoint(self):
-    if (self.tank.position - self.waypoints[self.next_waypoint]).length() < 0.01:
+    if (self.tank.position - self.waypoints[self.next_waypoint]).length() < 0.05:
       self.next_waypoint = (self.next_waypoint + 1) % len(self.waypoints)
 
   def turn_towards(self, delta, point):

@@ -5,20 +5,20 @@ The Perilous Journey
 (16, 16)
 
 # player start position and direction (in degrees)
-(1, 1), 0
+(1.5, 1.5), 0
 
 # ENEMIES, each given as
 # position, initial direction in degrees, waypoint type, list of waypoints
 START ENEMIES
-(9, 5), 90, LOOP, (9, 5), (9, 10), (5, 10), (5, 5)
-(5, 5), 0, LOOP, (5, 5), (9, 5), (9, 10), (5, 10)
+(9.5, 5.5), 90, LOOP, (9.5, 5.5), (9.5, 10.5), (5.5, 10.5), (5.5, 5.5)
+(5.5, 5.5), 0, LOOP, (5.5, 5.5), (9.5, 5.5), (9.5, 10.5), (5.5, 10.5)
 #(9, 10), 180, LOOP, (9, 10), (5, 10), (5, 5), (9, 5)
 #(5, 10), 270, LOOP, (5, 10), (5, 5), (9, 5), (9, 10)
 END ENEMIES
 
 START POWERUPS
-SPLASH,(2, 2)
-SHIELD,(2, 2)
+SPLASH,(2.5, 2.5)
+SHIELD,(2.5, 2.5)
 END POWERUPS
 
 

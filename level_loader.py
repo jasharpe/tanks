@@ -35,11 +35,11 @@ def load(number):
 
   # player start position
   player_info =  process(read())
-  player_start = Point(int(player_info[0]) + 0.5, int(player_info[1]) + 0.5)
+  player_start = Point(float(player_info[0]), float(player_info[1]))
   if not (0 <= player_start.x < width) or \
      not (0 <= player_start.y < height):
     raise Exception("Player start position (%d, %d) outside board." % (player_start.x, player_start.y))
-  player_direction = int(player_info[2])
+  player_direction = float(player_info[2])
   if not 0 <= player_direction < 360:
     raise Exception("Player direction should be between 0 and 359 degrees. Was %d." % player_direction)
   
@@ -54,19 +54,19 @@ def load(number):
     if line == "END ENEMIES":
       break
     enemy_info = process(line)
-    position = Point(int(enemy_info[0]) + 0.5, int(enemy_info[1]) + 0.5)
+    position = Point(float(enemy_info[0]), float(enemy_info[1]))
 
     if not (0 <= position.x < width) or \
        not (0 <= position.y < height):
       raise Exception("Enemy start position (%d, %d) outside board." % (x, y))
 
-    initial_direction = int(enemy_info[2])
+    initial_direction = float(enemy_info[2])
     if not 0 <= initial_direction < 360:
       raise Exception("Initial direction should be between 0 and 359 degrees. Was %d." % initial_direction)
     waypoint_type = enemy_info[3]
     waypoints = []
     for i in xrange(4, len(enemy_info), 2):
-      waypoints.append(Point(int(enemy_info[i]) + 0.5, int(enemy_info[i + 1]) + 0.5))
+      waypoints.append(Point(float(enemy_info[i]), float(enemy_info[i + 1])))
     enemies.append((position, math.pi * initial_direction / 180.0, waypoint_type, waypoints))
 
   start_powerups = read()
@@ -79,7 +79,7 @@ def load(number):
       break
     powerup_info = process(line)
     powerup_type = powerup_info[0]
-    position = Point(int(powerup_info[1]) + 0.5, int(powerup_info[2]) + 0.5)
+    position = Point(float(powerup_info[1]), float(powerup_info[2]))
     powerups.append(powerup_type_map[powerup_type](position))
 
   # tiles

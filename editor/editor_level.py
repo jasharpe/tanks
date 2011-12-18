@@ -2,14 +2,13 @@ import constants, editor_constants
 import pygame
 import level_loader
 from font import FontManager
-from geometry import Point
-from pygame.sprite import Group
+from geometry import Point, Vector, ORIGIN
+from board import Board
+from pygame.sprite import Group, OrderedUpdates
 import collision_detection as cd
 import math
 
 # TODO:
-# * powerups need type
-# * enemies need waypoints
 # * need to place tiles (walls and floor)
 # * saving and loading
 
@@ -19,16 +18,75 @@ def create_entity(name, data, position, font_manager):
   else:
     return Entity(name, data, position, font_manager)
 
+class Arrow(pygame.sprite.Sprite):
+  def __init__(self, wp1, wp2):
+    pygame.sprite.Sprite.__init__(self)
+
+    self.wp1 = wp1
+    self.wp2 = wp2
+
+    self.update_graphics()
+  
+  def update_graphics(self):
+    p1 = self.wp1.position.scale(constants.TILE_SIZE).int_round()
+    p2 = self.wp2.position.scale(constants.TILE_SIZE).int_round()
+    v = p2 - p1
+    width = abs(v.x) + 1
+    height = abs(v.y) + 1
+    self.image = pygame.Surface((width, height), flags=pygame.SRCALPHA)
+    self.image.fill(constants.COLOR_TRANSPARENT)
+
+    top_left = Point(min(p1.x, p2.x), min(p1.y, p2.y))
+    top_left_disp = top_left - ORIGIN
+
+    pygame.draw.line(self.image, (50, 50, 50), p1.translate(-top_left_disp), p2.translate(-top_left_disp), 2)
+    self.rect = self.image.get_rect(topleft=top_left)
+
+class Waypoints(object):
+  def __init__(self, font_manager):
+    self.font_manager = font_manager
+    self.waypoints = []
+    self.arrows = []
+
+    self.update_graphics()
+
+  def set_waypoints(self, waypoints):
+    self.waypoints = list(waypoints)
+    self.update_graphics()
+
+  def add(self, waypoint):
+    self.waypoints.append(waypoint)
+    self.update_graphics()
+
+  def delete(self, waypoint):
+    self.waypoints.remove(waypoint)
+    self.update_graphics()
+
+  def update_graphics(self):
+    for (i, w) in enumerate(self.waypoints):
+      w.set_label("W" + str(i + 1))
+    self.arrows = []
+    for (wp1, wp2) in zip(self.waypoints, self.waypoints[1:]):
+      self.arrows.append(Arrow(wp1, wp2))
+
+  def draw(self, screen):
+    OrderedUpdates(self.arrows).draw(screen)
+    OrderedUpdates(self.waypoints).draw(screen)
+
 class Entity(pygame.sprite.Sprite):
   def __init__(self, name, data, position, font_manager):
     pygame.sprite.Sprite.__init__(self)
     
     self.name = name
     self.data = data
+    self.label = self.data.label
     self.position = position
     self.font_manager = font_manager
 
     self.selected = False
+
+    if name == "ENEMY":
+      self.waypoints = Waypoints(font_manager)
 
     self.rotating = False
     # rotation in radians
@@ -36,6 +94,10 @@ class Entity(pygame.sprite.Sprite):
 
     self.update_graphics()
   
+  def set_label(self, label):
+    self.label = label
+    self.update_graphics()
+
   def contains_point(self, position):
     if self.data.shape in ["ROUND"]:
       return (position - self.position).length() < self.data.ratio / 2
@@ -69,13 +131,22 @@ class Entity(pygame.sprite.Sprite):
       pygame.draw.circle(self.image, color, image_center, int(round(self.image.get_width() / 2)))
     elif self.data.shape == "SQUARE":
       self.image.fill(color)
-      self.image = pygame.transform.rotate(self.image, -self.direction * 180.0 / math.pi)
     else:
       raise Exception("Unrecognized shape " + self.data.shape)
-    text = self.font_manager.render(self.data.label, 20, pygame.color.Color(0, 0, 0))
+    font_size = 20
+    if len(self.label) == 2:
+      font_size = 18
+    elif len(self.label) >= 3:
+      font_size = 12
+    text = self.font_manager.render(self.label, font_size, pygame.color.Color(0, 0, 0))
     dest = Point(self.image.get_width() / 2 - text.get_width() / 2, self.image.get_height() / 2 - text.get_height() / 2)
     self.image.blit(text, dest)
+    if self.data.shape == "SQUARE":
+      self.image = pygame.transform.rotate(self.image, -self.direction * 180.0 / math.pi)
     self.rect = self.image.get_rect(center=center)
+
+  def draw(self, screen):
+    self.waypoints.draw(screen)
 
 class EditorAction(object):
   def __init__(self, level, undo):
@@ -103,6 +174,32 @@ class RotateSelectionAction(EditorAction):
   def backward(self):
     for entity in self.entities:
       entity.rotate(self.rotation, -self.sign)
+
+class DeleteWaypointsAction(EditorAction):
+  def __init__(self, level, entity, undo=False):
+    EditorAction.__init__(self, level, undo)
+    
+    self.entity = entity
+    self.waypoints = list(self.entity.waypoints.waypoints)
+
+  def forward(self):
+    self.entity.waypoints.set_waypoints([])
+
+  def backward(self):
+    self.entity.waypoints.set_waypoints(self.waypoints)
+
+class AddWaypointAction(EditorAction):
+  def __init__(self, level, entity, waypoint, undo=False):
+    EditorAction.__init__(self, level, undo)
+
+    self.entity = entity
+    self.waypoint = waypoint
+
+  def forward(self):
+    self.entity.waypoints.add(self.waypoint)
+
+  def backward(self):
+    self.entity.waypoints.delete(self.waypoint)
 
 class AddEntityAction(EditorAction):
   def __init__(self, level, entity, undo=False):
@@ -178,12 +275,13 @@ class VerticalToolbar(pygame.sprite.Sprite):
     self.options = Group()
     self.hotkeys = {}
     top = editor_constants.RIGHT_BAR_ITEM_SPACING
-    for (name, data) in editor_constants.ENTITY_DATA.items():
+    for (name, data) in editor_constants.ENTITY_DATA:
       option = ToolbarOption(top, name, data, font_manager)
+      if self.selected is None:
+        self.select(option)
       self.options.add(option)
       top += editor_constants.RIGHT_BAR_ITEM_RATIO + editor_constants.RIGHT_BAR_ITEM_SPACING
       self.hotkeys[data.hotkey] = option
-    self.select(self.options.sprites()[0])
 
     self.update_graphics()
 
@@ -217,22 +315,61 @@ class VerticalToolbar(pygame.sprite.Sprite):
 
 MODE_ADD = 1
 MODE_SELECT = 2
+MODE_WAYPOINT = 3
+MODE_TILE = 4
 
 #ENTITIES
 
 # bounds is 
 def sphere_in_bounds(center, radius, bounds):
-  return \
-      center.x - radius > bounds['left'] and \
-      center.x + radius < bounds['right'] and \
-      center.y - radius > bounds['top'] and \
-      center.y + radius < bounds['bottom']
+  return (center.x - radius > bounds['left'] and
+          center.x + radius < bounds['right'] and
+          center.y - radius > bounds['top'] and
+          center.y + radius < bounds['bottom'])
+
+class Tile(pygame.sprite.Sprite):
+  def __init__(self, type, position):
+    pygame.sprite.Sprite.__init__(self)
+
+    self.position = position
+    self.set_type(type)
+
+    self.update_graphics()
+
+  def toggle_type(self):
+    if self.type == "W":
+      self.set_type("G")
+    else:
+      self.set_type("W")
+
+  def set_type(self, type):
+    self.type = type
+    self.solid = type == "W"
+    self.update_graphics()
+
+  def update_graphics(self):
+    self.image = pygame.Surface([constants.TILE_SIZE, constants.TILE_SIZE], flags=pygame.SRCALPHA)
+    if self.type == "W":
+      self.image.fill(constants.TILE_WALL_COLOR)
+    elif self.type == "G":
+      self.image.fill(constants.TILE_GROUND_COLOR)
+    self.rect = self.image.get_rect(topleft=self.position.scale(constants.TILE_SIZE))
 
 class EditorLevel(object):
   def __init__(self, editor):
     self.editor = editor
 
     self.font_manager = FontManager()
+
+    self.board = Board(constants.HORIZONTAL_TILES, constants.VERTICAL_TILES)
+    for x in xrange(0, constants.HORIZONTAL_TILES):
+      for y in xrange(0, constants.VERTICAL_TILES):
+        if x == 0 or y == 0 or x == constants.HORIZONTAL_TILES - 1 or y == constants.VERTICAL_TILES - 1:
+          tile = Tile("W", Point(x, y))
+        else:
+          tile = Tile("G", Point(x, y))
+        self.board.set_tile(x, y, tile) 
+    self.tiles = [tile for tile in self.board]
 
     self.entities = Group()
 
@@ -251,6 +388,7 @@ class EditorLevel(object):
     self.undone_action_stack = []
 
     self.selected_entities = []
+    self.waypoint_entity_selected = None
     #(name, player_start, player_direction, board, enemies, powerups) = level_loader.load(1)
     #self.player_start = PlayerStart(player_start)
   
@@ -259,7 +397,7 @@ class EditorLevel(object):
     self.pending_actions.append(action_type(self, *args))
 
   def get_entity(self, position):
-    data = editor_constants.ENTITY_DATA[self.entity_to_create]
+    data = editor_constants.ENTITY_DATA_MAP[self.entity_to_create]
     return Entity(self.entity_to_create, data, position, self.font_manager)
 
   def add_entity(self, entity):
@@ -274,6 +412,10 @@ class EditorLevel(object):
     if entity in self.selected_entities:
       entity.select(False)
       self.selected_entities.remove(entity)
+    
+    if entity is self.waypoint_entity_selected:
+      entity.select(False)
+      self.waypoint_entity_selected = None
 
   def delete_selection(self):
     self.add_action(DeleteSelectionAction, list(self.selected_entities))
@@ -330,15 +472,38 @@ class EditorLevel(object):
     elif self.mode == MODE_SELECT:
       for entity in self.entities:
         if entity.contains_point(position):
-          shift = (pressed[pygame.K_LCTRL] or pressed[pygame.K_RCTRL])
-          self.selection_click(entity, shift)
+          ctrl = (pressed[pygame.K_LCTRL] or pressed[pygame.K_RCTRL])
+          self.selection_click(entity, ctrl)
           break
+    elif self.mode == MODE_TILE:
+      for tile in self.tiles:
+        if cd.sprite_contains(tile, position.scale(constants.TILE_SIZE)):
+          tile.toggle_type()
+    elif self.mode == MODE_WAYPOINT:
+      ctrl = (pressed[pygame.K_LCTRL] or pressed[pygame.K_RCTRL])
+      if ctrl:
+        if self.waypoint_entity_selected is not None:
+          self.add_action(AddWaypointAction, self.waypoint_entity_selected, create_entity("WAYPOINT", editor_constants.WAYPOINT_DATA, position, self.font_manager))
+      else:
+        for entity in self.entities:
+          if entity.name == "ENEMY" and entity.contains_point(position):
+            if self.waypoint_entity_selected is not None:
+              self.waypoint_entity_selected.select(False)
+            self.waypoint_entity_selected = entity
+            entity.select(True)
 
   def switch_mode(self):
     if self.mode == MODE_ADD:
       self.mode = MODE_SELECT
     elif self.mode == MODE_SELECT:
       self.clear_selection()
+      self.mode = MODE_WAYPOINT
+    elif self.mode == MODE_WAYPOINT:
+      if self.waypoint_entity_selected is not None:
+        self.waypoint_entity_selected.select(False)
+      self.waypoint_entity_selected = None
+      self.mode = MODE_TILE
+    elif self.mode == MODE_TILE:
       self.mode = MODE_ADD
     print self.mode
 
@@ -362,7 +527,6 @@ class EditorLevel(object):
       for event in events:
         if event.type == pygame.KEYUP and event.key == self.rotation_key:
           self.stop_rotation(event.key)
-
     else:
       for event in events:
         if event.type == pygame.KEYDOWN and (event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT) and event.mod & pygame.KMOD_CTRL and self.mode == MODE_SELECT and self.selected_entities:
@@ -371,6 +535,9 @@ class EditorLevel(object):
           self.switch_mode()
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_DELETE and self.mode == MODE_SELECT:
           self.delete_selection()
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_DELETE and self.mode == MODE_WAYPOINT:
+          if self.waypoint_entity_selected is not None:
+            self.add_action(DeleteWaypointsAction, self.waypoint_entity_selected)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_y and event.mod & pygame.KMOD_CTRL:
           if self.undone_action_stack:
             action = self.undone_action_stack.pop()
@@ -401,7 +568,10 @@ class EditorLevel(object):
     self.entities.update(delta)
 
   def draw(self, screen):
+    OrderedUpdates(self.tiles).draw(screen)
     self.entities.draw(screen)
+    if self.waypoint_entity_selected is not None:
+      self.waypoint_entity_selected.draw(screen)
     self.toolbars.draw(screen)
     for toolbar in self.toolbars:
       toolbar.draw(screen)

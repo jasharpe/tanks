@@ -80,6 +80,9 @@ class Point:
   def scale(self, s):
     return Point(self.x * s, self.y * s)
 
+  def int_round(self):
+    return Point(int(round(self.x)), int(round(self.y)))
+
   # returns this point, rotated a radians about the origin
   def rotate(self, a):
     return Point(

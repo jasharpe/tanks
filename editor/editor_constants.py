@@ -34,8 +34,16 @@ class EntityData(object):
 
 ENTITY_SELECTED_COLOR = pygame.Color(255, 255, 0)
 
-ENTITY_DATA = {
-    'PLAYER' : EntityData(constants.TANK_SIZE_RATIO, 'S', pygame.K_s, pygame.Color(0, 255, 0), "SQUARE"),
-    'ENEMY' : EntityData(constants.TANK_SIZE_RATIO, 'E', pygame.K_e, pygame.Color(255, 0, 0), "SQUARE"),
-    'POWERUP' : EntityData(constants.POWERUP_SIZE_RATIO, 'P', pygame.K_p, pygame.Color(0, 0, 255), "ROUND")
-}
+ENTITY_DATA = [
+    ('PLAYER', EntityData(constants.TANK_SIZE_RATIO, 'S', pygame.K_s, pygame.Color(0, 255, 0), "SQUARE")),
+    ('ENEMY', EntityData(constants.TANK_SIZE_RATIO, 'E', pygame.K_e, pygame.Color(255, 0, 0), "SQUARE")),
+    ('SHIELD', EntityData(constants.POWERUP_SIZE_RATIO, 'SH', pygame.K_h, pygame.Color(0, 0, 255), "ROUND")),
+    ('REPAIR', EntityData(constants.POWERUP_SIZE_RATIO, 'R', pygame.K_r, pygame.Color(0, 0, 255), "ROUND")),
+    ('SPLASH', EntityData(constants.POWERUP_SIZE_RATIO, 'SP', pygame.K_p, pygame.Color(0, 0, 255), "ROUND"))
+]
+
+ENTITY_DATA_MAP = {}
+for (name, data) in ENTITY_DATA:
+  ENTITY_DATA_MAP[name] = data
+
+WAYPOINT_DATA = EntityData(constants.POWERUP_SIZE_RATIO, 'W', None, pygame.Color(200, 200, 200), "ROUND")

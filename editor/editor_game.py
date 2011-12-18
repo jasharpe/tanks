@@ -4,6 +4,7 @@ import pygame
 import constants, editor_constants
 from settings import Settings
 from editor_menu import EditorMainMenu
+from editor_saver import save_level
 
 STAGE_EDITOR = 1
 STAGE_MENU   = 2
@@ -32,7 +33,7 @@ class EditorGame(object):
     pass
 
   def save_level(self):
-    pass
+    save_level(self.editor, "level2.dat")
 
   def enter_menu(self, sub_menu=None):
     if sub_menu is None:
