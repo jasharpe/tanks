@@ -1,6 +1,8 @@
 from menu import Menu, BasicItem, register_event, enter_menu_action, get_setting, CheckItem
 from game_event import ResumeEvent, QuitEvent, MenuBackEvent, ToggleDebugEvent
-from editor_event import NewLevelEvent, SaveLevelEvent
+from editor_event import NewLevelEvent, SaveLevelEvent, LoadLevelEvent
+import constants
+import os
 
 class SettingsMenu(Menu):
   def __init__(self, game):
@@ -18,6 +20,8 @@ class LoadLevelMenu(Menu):
     self.menu_items = [
         BasicItem(self, "Back", register_event(MenuBackEvent)),
     ]
+    for level in filter(lambda x: x.endswith(".dat"), os.listdir(constants.DATA_DIR)):
+      self.menu_items.append(BasicItem(self, level, register_event(LoadLevelEvent, level)))
     self.menu_items[0].toggle_selected()
     self.selected = 0
 

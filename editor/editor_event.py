@@ -7,3 +7,10 @@ class NewLevelEvent(Event):
 class SaveLevelEvent(Event):
   def do(self):
     self.game.save_level()
+
+class LoadLevelEvent(Event):
+  def __init__(self, level):
+    self.level = level
+
+  def do(self):
+    self.game.load_level(self.level)

@@ -17,6 +17,7 @@ class Tile(pygame.sprite.Sprite):
     elif tile_type == 'G':
       self.image.fill(constants.TILE_GROUND_COLOR)
       self.solid = False
+    self.type = tile_type
     self.rect = self.image.get_rect()
     self.rect.x = constants.TILE_SIZE * x
     self.rect.y = constants.TILE_SIZE * y

@@ -12,9 +12,12 @@ powerup_type_map = {
     "SPLASH" : SplashPowerup
 }
 
-def load(number):
-  level_file = open(os.path.join(constants.DATA_DIR, "level%d.dat" % (number)), "r")
-
+def load(number_or_file):
+  if type(number_or_file) == int:
+    level_file = open(os.path.join(constants.DATA_DIR, "level%d.dat" % (number_or_file)), "r")
+  else:
+    level_file = open(os.path.join(constants.DATA_DIR, number_or_file), "r")
+  
   # read from level file, allowing comments starting with '#' and blank lines,
   # returning the first meaningful line, stripped of its new line character.
   def read():
@@ -80,7 +83,7 @@ def load(number):
     powerup_info = process(line)
     powerup_type = powerup_info[0]
     position = Point(float(powerup_info[1]), float(powerup_info[2]))
-    powerups.append(powerup_type_map[powerup_type](position))
+    powerups.append(powerup_type_map[powerup_type](position, powerup_type))
 
   # tiles
   board = Board(width, height)

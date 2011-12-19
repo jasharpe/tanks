@@ -9,14 +9,7 @@ import collision_detection as cd
 import math
 
 # TODO:
-# * need to place tiles (walls and floor)
 # * saving and loading
-
-def create_entity(name, data, position, font_manager):
-  if name in ["PLAYER"]:
-    return PlayerEntity(name, data, position, font_manager)
-  else:
-    return Entity(name, data, position, font_manager)
 
 class Arrow(pygame.sprite.Sprite):
   def __init__(self, wp1, wp2):
@@ -356,28 +349,59 @@ class Tile(pygame.sprite.Sprite):
     self.rect = self.image.get_rect(topleft=self.position.scale(constants.TILE_SIZE))
 
 class EditorLevel(object):
-  def __init__(self, editor):
+  def __init__(self, editor, level_file=None):
     self.editor = editor
+    self.font_manager = editor.font_manager
 
-    self.font_manager = FontManager()
+    if level_file is not None:
+      (name, player_start, player_direction, board, enemies, powerups) = level_loader.load(level_file)
+    else:
+      player_start = None
+      player_direction = None
+      board = None
+      enemies = []
+      powerups = []
 
     self.board = Board(constants.HORIZONTAL_TILES, constants.VERTICAL_TILES)
+    
     for x in xrange(0, constants.HORIZONTAL_TILES):
       for y in xrange(0, constants.VERTICAL_TILES):
-        if x == 0 or y == 0 or x == constants.HORIZONTAL_TILES - 1 or y == constants.VERTICAL_TILES - 1:
-          tile = Tile("W", Point(x, y))
+        if board is None:
+          if x == 0 or y == 0 or x == constants.HORIZONTAL_TILES - 1 or y == constants.VERTICAL_TILES - 1:
+            tile = Tile("W", Point(x, y))
+          else:
+            tile = Tile("G", Point(x, y))
         else:
-          tile = Tile("G", Point(x, y))
+          tile = Tile(board.get_tile(x, y).type, Point(x, y))
+
         self.board.set_tile(x, y, tile) 
-    self.tiles = [tile for tile in self.board]
+    self.tiles = OrderedUpdates([tile for tile in self.board])
 
     self.entities = Group()
+
+    if player_start is not None:
+      player_entity = Entity("PLAYER", editor_constants.ENTITY_DATA_MAP["PLAYER"], player_start, self.font_manager)
+      player_entity.rotate(player_direction, 1)
+      self.entities.add(player_entity)
+
+    for (position, direction, waypoint_type, waypoints) in enemies:
+      entity = Entity("ENEMY", editor_constants.ENTITY_DATA_MAP["ENEMY"], position, self.font_manager)
+      entity.rotate(direction, 1)
+      actual_waypoints = []
+      for waypoint in waypoints:
+        actual_waypoints.append(Entity("WAYPOINT", editor_constants.WAYPOINT_DATA, waypoint, self.font_manager))
+      entity.waypoints.set_waypoints(actual_waypoints)
+      self.entities.add(entity)
+
+    for powerup in powerups:
+      entity = Entity(powerup.type, editor_constants.ENTITY_DATA_MAP[powerup.type], powerup.position, self.font_manager)
+      self.entities.add(entity)
 
     self.toolbars = Group()
     vertical_toolbar = VerticalToolbar(self, self.font_manager)
     self.toolbars.add(vertical_toolbar)
 
-    self.player_exists = False
+    self.player_exists = bool([entity for entity in self.entities if entity.name == "PLAYER"])
     self.entity_to_create = vertical_toolbar.selected.name
     self.mode = MODE_ADD
 
@@ -388,9 +412,7 @@ class EditorLevel(object):
     self.undone_action_stack = []
 
     self.selected_entities = []
-    self.waypoint_entity_selected = None
-    #(name, player_start, player_direction, board, enemies, powerups) = level_loader.load(1)
-    #self.player_start = PlayerStart(player_start)
+    self.waypoint_entity_selected = None      
   
   def add_action(self, action_type, *args):
     self.undone_action_stack = []
@@ -483,7 +505,7 @@ class EditorLevel(object):
       ctrl = (pressed[pygame.K_LCTRL] or pressed[pygame.K_RCTRL])
       if ctrl:
         if self.waypoint_entity_selected is not None:
-          self.add_action(AddWaypointAction, self.waypoint_entity_selected, create_entity("WAYPOINT", editor_constants.WAYPOINT_DATA, position, self.font_manager))
+          self.add_action(AddWaypointAction, self.waypoint_entity_selected, Entity("WAYPOINT", editor_constants.WAYPOINT_DATA, position, self.font_manager))
       else:
         for entity in self.entities:
           if entity.name == "ENEMY" and entity.contains_point(position):
@@ -568,7 +590,7 @@ class EditorLevel(object):
     self.entities.update(delta)
 
   def draw(self, screen):
-    OrderedUpdates(self.tiles).draw(screen)
+    self.tiles.draw(screen)
     self.entities.draw(screen)
     if self.waypoint_entity_selected is not None:
       self.waypoint_entity_selected.draw(screen)

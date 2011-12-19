@@ -6,10 +6,11 @@ import shield
 import particle
 
 class Powerup(pygame.sprite.Sprite):
-  def __init__(self, p):
+  def __init__(self, p, type):
     pygame.sprite.Sprite.__init__(self)
 
     self.position = p
+    self.type = type
     self.picked_up = False
 
     self.color_time = 0

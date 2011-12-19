@@ -13,7 +13,7 @@ class EditorGame(object):
   def __init__(self):
     self.settings = Settings(editor_constants.DEFAULT_SETTINGS, "editor")
     self.font_manager = FontManager()
-    self.editor = EditorLevel(self)
+    self.editor = EditorLevel(self, "level2.dat")
     self.menu_stack = []
     self.events = []
     self.should_quit = False
@@ -30,10 +30,13 @@ class EditorGame(object):
     self.stage = STAGE_EDITOR
 
   def new_level(self):
-    pass
+    self.editor = EditorLevel(self)
 
   def save_level(self):
     save_level(self.editor, "level2.dat")
+
+  def load_level(self, level):
+    self.editor = EditorLevel(self, level)
 
   def enter_menu(self, sub_menu=None):
     if sub_menu is None:
