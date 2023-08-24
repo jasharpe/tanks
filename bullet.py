@@ -104,7 +104,7 @@ class Bullet(pygame.sprite.Sprite):
           results.append((EXPLODED, self.position))
           break
       elif reflectors:
-        print "multiple reflectors!"
+        print("multiple reflectors!")
       else:
         break
     return results

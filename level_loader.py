@@ -27,7 +27,7 @@ def load(number_or_file):
     return line
 
   def process(line):
-    return filter(None, re.split("[(), ]", line))
+    return list(filter(None, re.split("[(), ]", line)))
 
   name = read()
 
@@ -68,7 +68,7 @@ def load(number_or_file):
       raise Exception("Initial direction should be between 0 and 359 degrees. Was %d." % initial_direction)
     waypoint_type = enemy_info[3]
     waypoints = []
-    for i in xrange(4, len(enemy_info), 2):
+    for i in range(4, len(enemy_info), 2):
       waypoints.append(Point(float(enemy_info[i]), float(enemy_info[i + 1])))
     enemies.append((position, math.pi * initial_direction / 180.0, waypoint_type, waypoints))
 

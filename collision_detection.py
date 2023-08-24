@@ -70,11 +70,11 @@ def sprite_collide_exact(sprite1, sprite2):
   x_offset = sprite1.rect.x - sprite2.rect.x
   y_offset = sprite1.rect.y - sprite2.rect.y
   
-  for x in xrange(0, sprite1.image.get_width()):
+  for x in range(0, sprite1.image.get_width()):
     sprite2_x = x + x_offset
     if sprite2_x < 0 or sprite2_x >= sprite2.image.get_width():
       continue
-    for y in xrange(0, sprite1.image.get_height()):
+    for y in range(0, sprite1.image.get_height()):
       sprite2_y = y + y_offset
       if sprite2_y < 0 or sprite2_y >= sprite2.image.get_height():
         continue

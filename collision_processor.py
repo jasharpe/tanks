@@ -177,7 +177,7 @@ class CollisionProcessor(object):
       # break out if we've obviously hit an infinite loop
       if loops > 20:
         if self.level.game.settings['debug']:
-          print "tank collision resolution hit an infinite loop"
+          print("tank collision resolution hit an infinite loop")
         break
       conflicts = False
       for tank1 in self.level.all_tanks():

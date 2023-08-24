@@ -11,7 +11,7 @@ class Settings:
           (k, v) = line
           self.d[k] = ast.literal_eval(v)
     except Exception as e:
-      print e
+      print(e)
 
   def write_settings(self):
     if not os.path.exists(constants.USER_DATA_DIR):

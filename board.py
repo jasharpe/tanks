@@ -21,8 +21,8 @@ class Board:
       self.get_tile(x, y).set_accessible(direction, False)
 
   def fix_accessibility(self):
-    for x in xrange(0, self.width):
-      for y in xrange(0, self.height):
+    for x in range(0, self.width):
+      for y in range(0, self.height):
         if self.get_tile(x, y).solid:
           self.set_accessible(x - 1, y, TILE_RIGHT)
           self.set_accessible(x + 1, y, TILE_LEFT)

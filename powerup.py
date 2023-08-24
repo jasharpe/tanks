@@ -32,7 +32,7 @@ class Powerup(pygame.sprite.Sprite):
 
     self.do(level, self.target)
     self.target.taking.remove(self)
-    for i in xrange(0, constants.POWERUP_PARTICLES):
+    for i in range(0, constants.POWERUP_PARTICLES):
       angle = i * 2 * math.pi / constants.POWERUP_PARTICLES
       d = geometry.Vector(angle)
       p = self.position

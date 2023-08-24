@@ -48,7 +48,7 @@ def load_sound(name):
   fullname = os.path.join(constants.DATA_DIR, name + ".wav")
   try:
     sound = pygame.mixer.Sound(fullname)
-  except pygame.error, message:
-    print "cannot load sound:", fullname
-    raise SystemExit, message
+  except (pygame.error, message):
+    print("cannot load sound:", fullname)
+    raise SystemExit(message)
   return sound

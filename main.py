@@ -61,7 +61,7 @@ class Main(object):
       if frame_time > FRAME_MS:
         if game.settings['debug']:
           bad_frames += 1
-          print "Last frame took %d" % (frame_time)
+          print("Last frame took %d" % (frame_time))
       
       frames += 1
 
@@ -86,7 +86,7 @@ class GameMain(Main):
     return Game(self.starting_level)
 
   def usage(self):
-    print '''-l for starting level (for debug purposes)'''
+    print('''-l for starting level (for debug purposes)''')
 
   def handle_args(self, argv):
     try:

@@ -18,16 +18,16 @@ class LevelStats:
     self.kills.append((bullet, killed_tank))
 
   def fired_shots(self, tank):
-    return len(filter(
+    return len(list(filter(
         lambda bullet: bullet.owner is tank,
         self.bullets_fired
-    ))
+    )))
 
   def hit_shots(self, tank):
-    return len(filter(
-        lambda (bullet, hit_tank): bullet.owner is tank and not hit_tank is tank,
+    return len(list(filter(
+        lambda bullet_hit: bullet_hit[0].owner is tank and not bullet_hit[1] is tank,
         self.bullet_hits
-    ))
+    )))
 
   def blocked_shots(self, tank):
     blocked = 0
@@ -47,13 +47,13 @@ class LevelStats:
       return total_hit / float(total_fired)
 
   def kill_total(self, tank):
-    return len(filter(
-        lambda (bullet, killed_tank): bullet.owner is tank and not tank is killed_tank,
+    return len(list(filter(
+        lambda bullet_hit: bullet_hit[0].owner is tank and not bullet_hit[1] is tank,
         self.kills
-    ))
+    )))
 
   def friendly_fire_kills(self, tank):
-    return len(filter(
-        lambda (bullet, killed_tank): not bullet.owner is tank and not tank is killed_tank,
+    return len(list(filter(
+        lambda bullet_hit: not bullet_hit[0].owner is tank and not tank is bullet_hit[1],
         self.kills
-    ))
+    )))

@@ -4,13 +4,17 @@ Tanks! is a game implemented with pygame in which the player must use a tank to 
 
 ### Dependencies, version and OS info
 
-Requires pygame to be installed. Developed on python 2.7 and Windows 7, other versions or OSes are supported, but I may not know if they work or not. Please let me know if they don't and I'll try to fix.
+Requires pygame to be installed. Developed on python 3 and Windows 7, other versions or OSes are supported, but I may not know if they work or not. Please let me know if they don't and I'll try to fix.
 
 ### How to run
 
+First, install pygame:
+
+    pip3 install pygame
+
 Run the game by typing
 
-    python main.py
+    python3 main.py
   
 at the command line while in the top level directory.
 
